@@ -1,0 +1,1068 @@
+\documentclass[12pt,a4paper]{article}
+
+% ====== PACKAGES ======
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{tocloft}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{setspace}
+\usepackage{microtype}
+\usepackage{amssymb}
+\usepackage{pifont}
+\newcommand{\yes}{\textcolor{primary}{\ding{51}}}
+\newcommand{\nope}{\textcolor{darkgray}{---}}
+
+% ====== COULEURS ======
+\definecolor{primary}{RGB}{0, 70, 140}
+\definecolor{secondary}{RGB}{30, 130, 200}
+\definecolor{accent}{RGB}{220, 80, 50}
+\definecolor{lightgray}{RGB}{240, 240, 240}
+\definecolor{darkgray}{RGB}{80, 80, 80}
+
+% ====== HYPERREF ======
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    urlcolor=secondary,
+    citecolor=primary,
+    pdftitle={Cahier des Charges - Plateforme de Gestion d'Auto-École},
+    pdfauthor={Ajmi},
+    pdfsubject={Cahier des charges fonctionnel et technique}
+}
+
+% ====== STYLE TITRES ======
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{primary}}
+  {\thesection}{1em}{}
+  [\vspace{2pt}\color{primary}\titlerule]
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{secondary}}
+  {\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\color{darkgray}}
+  {\thesubsubsection}{1em}{}
+
+% ====== EN-TÊTE / PIED DE PAGE ======
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{darkgray}Cahier des Charges}
+\fancyhead[R]{\small\color{darkgray}Plateforme Auto-École}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{primary}\leaders\hrule height \headrulewidth\hfill}}
+
+% ====== ESPACEMENT ======
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+% ====== TOC STYLE ======
+\renewcommand{\cftsecfont}{\bfseries\color{primary}}
+\renewcommand{\cftsecpagefont}{\bfseries\color{primary}}
+
+% ====== COMMANDES UTILES ======
+\newcommand{\highlight}[1]{\textbf{\color{primary}#1}}
+\newcommand{\role}[1]{\textbf{\color{accent}#1}}
+
+% ====== BOÎTE D'INFO ======
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{infobox}[1]{
+    enhanced,
+    breakable,
+    colback=lightgray,
+    colframe=primary,
+    title={#1},
+    fonttitle=\bfseries\color{white},
+    coltitle=white,
+    boxrule=0.5pt,
+    arc=2pt
+}
+
+% ====== DÉBUT DOCUMENT ======
+\begin{document}
+
+% ====== PAGE DE GARDE ======
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
+
+        {\color{primary}\rule{\textwidth}{1pt}}
+        \vspace{0.5cm}
+
+        {\Huge \bfseries \color{primary} Cahier des Charges \par}
+        \vspace{0.3cm}
+        {\Large \color{darkgray} Fonctionnel et Technique \par}
+
+        \vspace{0.3cm}
+        {\color{primary}\rule{\textwidth}{1pt}}
+
+        \vspace{2cm}
+
+        {\huge \bfseries Plateforme de Gestion \par}
+        \vspace{0.3cm}
+        {\huge \bfseries d'Auto-École \par}
+
+        \vspace{0.5cm}
+        {\Large \color{secondary} \textit{Solution de gestion intégrée et communication temps réel} \par}
+
+        \vspace{3cm}
+
+        \begin{tabularx}{0.8\textwidth}{>{\bfseries\color{primary}}l X}
+            \toprule
+            Projet & Plateforme web de gestion d'auto-école \\
+            \midrule
+            Architecture & Microservices \\
+            \midrule
+            Version & 1.0 \\
+            \midrule
+            Date & \today \\
+            \midrule
+            Auteur & Ajmi \\
+            \bottomrule
+        \end{tabularx}
+
+        \vfill
+
+        {\color{darkgray}\small Document confidentiel --- Tous droits réservés}
+    \end{center}
+\end{titlepage}
+
+% ====== TABLE DES MATIÈRES ======
+\tableofcontents
+\newpage
+
+% ====== 1. PRÉSENTATION DU PROJET ======
+\section{Présentation du projet}
+
+\subsection{Contexte}
+
+Le secteur des auto-écoles connaît une transformation digitale progressive. Les établissements gèrent encore majoritairement leurs activités à travers des outils hétérogènes : tableurs pour la planification, registres papier pour les heures de conduite, applications de messagerie grand public pour communiquer avec les élèves. Cette dispersion engendre des pertes de temps, des erreurs de planification, ainsi qu'un manque de visibilité pour la direction sur l'activité globale.
+
+Le présent projet propose une \highlight{plateforme web unifiée} permettant de centraliser l'ensemble des opérations d'une auto-école : gestion administrative, planification des séances, communication entre moniteurs et élèves, suivi financier, et pilotage de l'activité.
+
+\subsection{Objectifs}
+
+Le projet poursuit les objectifs suivants :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Digitaliser l'ensemble du processus métier d'une auto-école.
+    \item Faciliter la communication temps réel entre les moniteurs et les élèves.
+    \item Optimiser la planification des séances de conduite et de code.
+    \item Centraliser le suivi financier et la facturation.
+    \item Offrir un tableau de bord analytique pour la direction.
+    \item Garantir une expérience utilisateur fluide sur web et mobile.
+\end{itemize}
+
+\subsection{Périmètre fonctionnel}
+
+La plateforme couvre les domaines suivants :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Gestion des utilisateurs et des rôles (propriétaire, secrétaire, moniteur, client).
+    \item Gestion du parc automobile et de l'affectation aux moniteurs.
+    \item Planification et réservation des séances de conduite et de code.
+    \item Communication temps réel (messagerie instantanée).
+    \item Gestion financière (forfaits, paiements, facturation).
+    \item Gestion documentaire (pièces d'identité, dossiers administratifs).
+    \item Notifications multicanales (Email, SMS, notifications dans l'application).
+    \item Reporting et tableaux de bord analytiques.
+    \item Module d'apprentissage intelligent du code de la route (tuteur IA, quiz adaptatif, examen blanc, analyse pédagogique).
+\end{itemize}
+
+\subsection{Acteurs et parties prenantes}
+
+\begin{longtable}{>{\bfseries\color{primary}}p{3.5cm} p{10cm}}
+    \toprule
+    \textbf{\color{primary}Acteur} & \textbf{\color{primary}Description} \\
+    \midrule
+    Propriétaire & Dirigeant de l'auto-école, dispose d'un accès complet à l'ensemble des fonctionnalités et données. \\
+    \midrule
+    Secrétaire & Personnel administratif chargé de la gestion opérationnelle quotidienne. \\
+    \midrule
+    Moniteur & Enseignant de la conduite, assurant les séances pratiques et théoriques. \\
+    \midrule
+    Client (Élève) & Personne inscrite à l'auto-école pour préparer son examen du permis. \\
+    \bottomrule
+\end{longtable}
+
+\newpage
+
+% ====== 2. ÉTUDE DE L'EXISTANT ======
+\section{Étude de l'existant et besoins}
+
+\subsection{Problématiques actuelles}
+
+Les auto-écoles traditionnelles font face à plusieurs difficultés :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \highlight{Planification manuelle} : conflits d'horaires fréquents, double réservation de véhicules ou de moniteurs.
+    \item \highlight{Communication fragmentée} : utilisation de canaux multiples (téléphone, SMS, WhatsApp) sans traçabilité.
+    \item \highlight{Suivi financier opaque} : difficulté à connaître en temps réel le chiffre d'affaires, les impayés, les heures réalisées par moniteur.
+    \item \highlight{Gestion documentaire papier} : risque de perte, accès difficile aux dossiers des élèves.
+    \item \highlight{Manque d'indicateurs} : absence de tableau de bord pour piloter l'activité.
+\end{itemize}
+
+\subsection{Besoins exprimés}
+
+\subsubsection{Besoins du propriétaire}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Vue d'ensemble de l'activité (CA, taux d'occupation, taux de réussite aux examens).
+    \item Gestion des comptes utilisateurs et des permissions.
+    \item Pilotage des moniteurs, secrétaires, véhicules et finances.
+    \item Accès à l'ensemble des rapports et statistiques.
+\end{itemize}
+
+\subsubsection{Besoins du secrétariat}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Gestion du parc automobile (ajout, entretien, disponibilité).
+    \item Gestion financière : encaissements, facturation, suivi des forfaits.
+    \item Affectation des heures de travail aux moniteurs.
+    \item Inscription des nouveaux clients et gestion de leur dossier.
+\end{itemize}
+
+\subsubsection{Besoins du moniteur}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Consultation du calendrier journalier et hebdomadaire.
+    \item Communication directe avec les clients (messagerie).
+    \item Validation ou refus des demandes de séance.
+    \item Suivi de la progression pédagogique de chaque élève.
+\end{itemize}
+
+\subsubsection{Besoins du client}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Réservation en ligne de séances de conduite ou de code.
+    \item Communication avec son moniteur.
+    \item Consultation de son planning, de son forfait et de sa progression.
+    \item Accès à son historique de paiements et à ses documents.
+\end{itemize}
+
+\newpage
+
+% ====== 3. SPÉCIFICATIONS FONCTIONNELLES ======
+\section{Spécifications fonctionnelles}
+
+\subsection{Module : Gestion des utilisateurs et authentification}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Inscription et création de compte (client en libre-service, autres rôles créés par le propriétaire ou la secrétaire).
+    \item Authentification sécurisée (JWT + Refresh Token).
+    \item Gestion des rôles et permissions (RBAC --- Role-Based Access Control).
+    \item Réinitialisation de mot de passe par email.
+    \item Gestion du profil (informations personnelles, photo, préférences).
+\end{itemize}
+
+\subsection{Module : Gestion du parc automobile}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Enregistrement des véhicules (marque, modèle, immatriculation, type de boîte, carburant).
+    \item Suivi de l'entretien (révisions, contrôle technique, assurance).
+    \item Affectation d'un véhicule à un moniteur ou à une séance.
+    \item État de disponibilité en temps réel.
+    \item Historique d'utilisation par véhicule.
+\end{itemize}
+
+\subsection{Module : Planification et réservation}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Calendrier interactif (vue jour, semaine, mois).
+    \item Réservation de séances par le client (conduite ou code).
+    \item Système anti-conflit : détection des chevauchements (moniteur, véhicule, élève).
+    \item Validation manuelle ou automatique selon paramétrage.
+    \item Annulation et report de séances avec règles de préavis.
+    \item Affectation automatique d'un véhicule disponible.
+\end{itemize}
+
+\subsection{Module : Communication temps réel}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Messagerie instantanée entre moniteur et client via WebSocket.
+    \item Indicateur de présence en ligne et accusé de lecture.
+    \item Historique des conversations.
+    \item Envoi de fichiers (photos, documents).
+    \item Notifications push lors de nouveaux messages.
+\end{itemize}
+
+\subsection{Module : Gestion financière}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Définition des forfaits (heures de conduite, sessions de code, prix).
+    \item Inscription d'un client à un forfait.
+    \item Suivi de la consommation (heures réalisées vs. heures du forfait).
+    \item Enregistrement des paiements (espèces, chèque, virement, carte).
+    \item Échéanciers de paiement.
+    \item Génération de factures et reçus en PDF.
+    \item Suivi des impayés et relances.
+\end{itemize}
+
+\subsection{Module : Gestion documentaire}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Upload et stockage sécurisé des documents (CIN, photo, dossier d'inscription).
+    \item Classement par dossier client.
+    \item Téléchargement et consultation par les rôles autorisés.
+    \item Suivi de la validité des documents (date d'expiration).
+\end{itemize}
+
+\subsection{Module : Notifications multicanales}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Notifications in-app (cloche, badges).
+    \item Notifications par Email (confirmation de réservation, rappel de séance, facture).
+    \item Notifications par SMS (rappel 24h avant la séance, alerte d'annulation).
+    \item Configuration des préférences de notification par utilisateur.
+\end{itemize}
+
+\subsection{Module : Tableau de bord analytique}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Indicateurs financiers : CA mensuel/annuel, encaissements, impayés.
+    \item Indicateurs opérationnels : taux d'occupation des moniteurs, taux d'utilisation des véhicules.
+    \item Indicateurs pédagogiques : taux de réussite à l'examen, durée moyenne de formation.
+    \item Visualisations graphiques (courbes, histogrammes, jauges).
+    \item Export des données (PDF, Excel).
+\end{itemize}
+
+\newpage
+
+% ====== 4. MODULE IA ======
+\section{Module d'apprentissage intelligent (IA)}
+
+\subsection{Vue d'ensemble}
+
+La plateforme intègre un \highlight{module d'intelligence artificielle} dédié à l'apprentissage du code de la route. Ce module ne remplace pas l'enseignement humain : il vient en \textbf{complément pédagogique} pour offrir à l'élève un accompagnement disponible 24h/24, et à l'auto-école une vision fine de la progression de chaque apprenant.
+
+Le module est construit autour d'une architecture \highlight{RAG (Retrieval-Augmented Generation)}, qui combine la puissance d'un grand modèle de langage (LLM) avec une base documentaire propre à l'auto-école. Cette approche garantit des réponses ancrées dans les sources officielles et limite le risque d'erreur ou d'hallucination.
+
+\begin{infobox}{Trois fonctionnalités IA, trois publics}
+\textbf{Tuteur conversationnel} pour l'élève --- explication des réponses et chat libre sur le code. \\
+\textbf{Quiz adaptatif} pour l'élève --- entraînement personnalisé ciblant les points faibles. \\
+\textbf{Analyse pédagogique} pour le propriétaire et la secrétaire --- synthèse intelligente des performances de chaque élève.
+\end{infobox}
+
+\subsection{Sous-module 1 : Tuteur IA conversationnel}
+
+\subsubsection{Description fonctionnelle}
+
+Le tuteur IA est un assistant conversationnel accessible à l'élève à tout moment. Il intervient dans deux contextes :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \textbf{Explication contextuelle après quiz} --- Lorsqu'une question est ratée, un bouton \og Pourquoi ? \fg{} permet d'obtenir une explication détaillée de la bonne réponse, illustrée par la règle correspondante du code de la route.
+    \item \textbf{Chat libre} --- L'élève peut poser n'importe quelle question sur le code (panneaux, priorités, vitesse, situations particulières) via une interface de messagerie dédiée.
+\end{itemize}
+
+L'élève peut enchaîner des questions de suivi pour approfondir un sujet (\textit{« Et si le feu était orange clignotant ? »}, \textit{« Cette règle s'applique-t-elle hors agglomération ? »}).
+
+\subsubsection{Caractéristiques principales}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Disponibilité bilingue : \textbf{français et arabe}. L'élève choisit sa langue de préférence dans son profil et peut la changer en cours de conversation.
+    \item Réponses streamées en temps réel (effet \og machine à écrire \fg{}).
+    \item Chaque réponse est accompagnée de la \textbf{source documentaire} citée (extrait du code de la route ou du manuel).
+    \item Affichage systématique d'un disclaimer : \textit{« Réponse générée par IA. En cas de doute, consultez votre moniteur. »}
+    \item Bouton de feedback \og Cette réponse est-elle utile ? \fg{} (pouce haut/bas) pour signaler les réponses problématiques.
+    \item Mécanisme de \textbf{fallback sécurisé} : si le système ne trouve pas de source pertinente dans la base documentaire, il répond \textit{« Je ne dispose pas d'information fiable sur ce point, contactez votre auto-école »} plutôt que d'inventer.
+\end{itemize}
+
+\subsubsection{Accès au tuteur}
+
+L'usage du tuteur conversationnel est ouvert à trois rôles :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \role{Client} --- usage principal, dans le cadre de son apprentissage.
+    \item \role{Secrétaire} --- consultation possible, notamment pour répondre aux questions des clients par téléphone ou au comptoir.
+    \item \role{Propriétaire} --- accès complet pour vérification et supervision.
+\end{itemize}
+
+Le \role{Moniteur} n'a pas accès au tuteur IA : son rôle est centré sur la pratique de la conduite, et l'enseignement théorique est porté par la secrétaire et le tuteur IA.
+
+\subsubsection{Confidentialité des conversations}
+
+L'historique des conversations d'un élève avec le tuteur est \highlight{strictement confidentiel} : seul l'élève peut consulter ses échanges passés. Ni le propriétaire, ni la secrétaire, ni le moniteur n'ont accès au contenu des conversations d'un élève. Cette règle garantit un espace d'apprentissage rassurant où l'élève peut poser librement toutes ses questions, y compris les plus basiques.
+
+\subsection{Sous-module 2 : Quiz adaptatif personnalisé}
+
+\subsubsection{Description fonctionnelle}
+
+Plutôt que de servir des questions aléatoires, le système analyse les performances de chaque élève et compose des sessions de révision ciblant prioritairement ses \textbf{points faibles}.
+
+\subsubsection{Organisation par chapitres}
+
+Le corpus de questions est structuré par \textbf{chapitres thématiques} (signalisation, priorités, vitesse, stationnement, conduite défensive, premiers secours, etc.). L'élève peut :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Réviser \textbf{un chapitre spécifique} (mode focus).
+    \item Choisir le \textbf{mode mixte} : sélection de plusieurs chapitres, ou ensemble du corpus, avec pondération adaptative.
+\end{itemize}
+
+\subsubsection{Tagging des questions}
+
+Lorsque la secrétaire ou le propriétaire uploade un lot de questions :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item L'IA \textbf{classifie automatiquement} chaque question dans le chapitre approprié (tagging automatique par analyse sémantique).
+    \item La secrétaire peut \textbf{corriger manuellement} les tags proposés ou en ajouter (interface de revue avant publication).
+    \item Une question peut être associée à \textbf{plusieurs chapitres} (multi-tag) si elle couvre plusieurs thèmes.
+\end{itemize}
+
+\subsubsection{Algorithme de sélection}
+
+Pour chaque élève, le système maintient un \textbf{score de maîtrise} par chapitre (valeur entre 0 et 1). La composition du prochain quiz suit la règle suivante :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item 60\% de questions issues des chapitres faibles (score $< 0{,}5$).
+    \item 30\% de questions issues des chapitres moyens (score entre 0{,}5 et 0{,}8).
+    \item 10\% de questions nouvelles ou récemment échouées, en logique de \textbf{répétition espacée} (réapparition à J+1, J+3, J+7).
+\end{itemize}
+
+\subsubsection{Démarrage à froid}
+
+Lorsqu'un nouvel élève s'inscrit, le système n'a aucune donnée sur ses connaissances. Un \textbf{quiz initial de calibration} de 20 questions, couvrant tous les chapitres de manière équilibrée, est proposé à la première connexion. Les résultats initialisent les scores de maîtrise par chapitre.
+
+\subsection{Sous-module 3 : Mode examen blanc}
+
+Ce mode simule les conditions réelles de l'examen officiel :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Nombre de questions fixe (paramétrable par l'auto-école, typiquement 40 questions).
+    \item Durée limitée et chronomètre visible.
+    \item Aucune assistance IA pendant l'examen (le bouton \og Pourquoi ? \fg{} et le chat sont désactivés).
+    \item Note finale et seuil de réussite affichés à la soumission.
+    \item Correction IA détaillée disponible \textbf{après} la fin de l'examen, question par question.
+    \item Statistiques d'examens blancs trackées séparément des sessions de révision.
+\end{itemize}
+
+\subsection{Sous-module 4 : Analyse pédagogique IA (côté gestion)}
+
+\subsubsection{Vue par élève}
+
+Le propriétaire et la secrétaire disposent d'un tableau de bord IA pour chaque élève, comprenant :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Une \textbf{synthèse en langage naturel} générée à la demande, par exemple : \textit{« Mariem a réalisé 450 questions ce mois-ci avec un taux de réussite global de 72\%. Forte progression sur la signalisation (+25\%), mais faiblesse persistante sur les priorités à droite (38\% de réussite). Recommandation : prévoir une session de révision ciblée avant l'examen blanc prévu le 15. »}
+    \item \textbf{Indice de prédiction} de réussite à l'examen, calculé à partir des scores actuels et de l'évolution récente.
+    \item \textbf{Recommandations actionnables} : élèves prêts pour l'examen, élèves en stagnation, élèves à recontacter.
+\end{itemize}
+
+\subsubsection{Vue globale (propriétaire uniquement)}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Taux de réussite moyen aux examens blancs, par mois et par promotion.
+    \item Identification des chapitres globalement les plus difficiles pour les élèves de l'auto-école.
+    \item Suggestions de \textbf{cours de groupe} ou de supports pédagogiques à renforcer.
+\end{itemize}
+
+\subsubsection{Mise en cache}
+
+Les synthèses IA sont mises en cache pendant 24 heures pour limiter le coût des appels au LLM tout en conservant une information à jour quotidiennement.
+
+\subsection{Sous-module 5 : Notifications IA proactives}
+
+Le système initie des notifications intelligentes (envoyées via le module Notifications) :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \textbf{Rappel d'inactivité} --- \textit{« Tu n'as pas révisé depuis 5 jours, voici 10 questions ciblées sur tes points faibles. »}
+    \item \textbf{Recommandation d'examen blanc} --- \textit{« Ton niveau atteint le seuil de réussite, tu peux passer un examen blanc. »}
+    \item \textbf{Encouragement après progression} --- \textit{« Ton score sur la signalisation est passé de 45\% à 78\%, bravo ! »}
+    \item \textbf{Alerte de stagnation} (à destination de la secrétaire) --- \textit{« 3 élèves stagnent depuis plus de 10 jours, un suivi serait bénéfique. »}
+\end{itemize}
+
+L'élève peut désactiver les notifications IA dans ses préférences.
+
+\subsection{Sources documentaires du RAG}
+
+La base documentaire indexée alimente toutes les fonctionnalités IA. Quatre catégories de sources sont prévues :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \textbf{Code de la route tunisien officiel} --- documents PDF officiels (français et arabe).
+    \item \textbf{Manuel de l'auto-école} --- support pédagogique propre à l'établissement, s'il en dispose.
+    \item \textbf{FAQ rédigée par les moniteurs et la direction} --- réponses aux questions fréquentes des élèves, capitalisation du savoir interne.
+    \item \textbf{Banque de questions avec explications} --- les questions de quiz uploadées sont elles-mêmes indexées avec leurs corrigés détaillés.
+\end{itemize}
+
+L'ingestion d'un nouveau document déclenche automatiquement le chunking (découpage en passages), le calcul des embeddings et l'indexation dans la base vectorielle.
+
+\subsection{Maîtrise des coûts API}
+
+L'utilisation d'un LLM via API externe (OpenAI ou Anthropic) génère un coût à l'usage. Le système intègre les mécanismes suivants :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \textbf{Budget mensuel global} configurable par le propriétaire (plafond en dinars / euros).
+    \item Suivi en temps réel de la consommation et alerte à 80\% du budget.
+    \item Suspension automatique des fonctionnalités IA si le budget est dépassé, avec notification au propriétaire.
+    \item \textbf{Tableau de bord des coûts IA} réservé au propriétaire, affichant :
+    \begin{itemize}
+        \item Coût total du mois en cours, par jour et par fonctionnalité (tuteur, quiz, analyse).
+        \item Coût moyen par élève actif.
+        \item Top 10 des élèves consommateurs (pour détecter d'éventuels abus).
+        \item Projection de coût en fin de mois.
+    \end{itemize}
+    \item Mise en cache agressive des synthèses pédagogiques (24h) et des réponses aux questions fréquentes.
+\end{itemize}
+
+\subsection{Architecture technique du module IA}
+
+\begin{infobox}{Microservice dédié : ai-service}
+Le module IA est porté par un \textbf{microservice dédié} (\texttt{ai-service}), isolé du reste de la plateforme pour des raisons de sécurité, de scalabilité et de maîtrise des coûts.
+\end{infobox}
+
+\subsubsection{Composants techniques}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{>{\bfseries\color{primary}}p{4cm} p{10cm}}
+    \toprule
+    \textbf{\color{primary}Composant} & \textbf{\color{primary}Rôle} \\
+    \midrule
+    \endhead
+
+    LLM (API externe) & OpenAI GPT-4o ou Anthropic Claude. Provider abstrait par interface pour permettre le changement ou l'ajout d'alternatives. \\
+    \rowcolor{lightgray}
+    Base vectorielle & Qdrant --- stockage des embeddings et recherche de similarité. \\
+    Modèle d'embedding & \texttt{text-embedding-3-small} (OpenAI) ou équivalent open-source. \\
+    \rowcolor{lightgray}
+    Orchestration RAG & LangChain (Java/Python via interop) ou Spring AI. \\
+    Pipeline d'ingestion & Service de chunking et d'indexation déclenché à l'upload d'un document. \\
+    \rowcolor{lightgray}
+    Cache des réponses & Redis --- mise en cache des synthèses et des questions fréquentes. \\
+    Stockage des conversations & PostgreSQL --- historique par élève (cloisonné par utilisateur). \\
+    \rowcolor{lightgray}
+    Streaming temps réel & WebSocket --- réponses du tuteur diffusées token par token. \\
+    \bottomrule
+\end{longtable}
+
+
+\subsubsection{Sécurité et gouvernance}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Anonymisation des données envoyées à l'API LLM externe (pas de nom complet, pas d'identifiant personnel).
+    \item Conformité avec les bonnes pratiques de protection des données personnelles.
+    \item Logs d'audit de toutes les requêtes IA (à des fins de qualité et de coût, pas pour consultation par les autres rôles).
+    \item Possibilité de désactiver complètement le module IA depuis la configuration du propriétaire.
+\end{itemize}
+
+\newpage
+
+% ====== 5. MATRICE DES PERMISSIONS ======
+\section{Matrice des rôles et permissions}
+
+\renewcommand{\arraystretch}{1.4}
+\begin{longtable}{p{4.8cm} >{\centering\arraybackslash}p{2.3cm} >{\centering\arraybackslash}p{2cm} >{\centering\arraybackslash}p{2cm} >{\centering\arraybackslash}p{2cm}}
+    \toprule
+    \rowcolor{primary}
+    {\color{white}\bfseries Fonctionnalité} & {\color{white}\bfseries Propriétaire} & {\color{white}\bfseries Secrétaire} & {\color{white}\bfseries Moniteur} & {\color{white}\bfseries Client} \\
+    \midrule
+    \endhead
+
+    Gestion des utilisateurs & \yes & \yes & \nope & \nope \\
+    \rowcolor{lightgray}
+    Gestion du parc automobile & \yes & \yes & Lecture & \nope \\
+    Gestion financière & \yes & \yes & \nope & Lecture (perso) \\
+    \rowcolor{lightgray}
+    Affectation des heures & \yes & \yes & \nope & \nope \\
+    Planification générale & \yes & \yes & Lecture & \nope \\
+    \rowcolor{lightgray}
+    Calendrier personnel & \yes & \yes & \yes & \yes \\
+    Réservation de séance & \yes & \yes & \nope & \yes \\
+    \rowcolor{lightgray}
+    Validation des demandes & \yes & \yes & \yes & \nope \\
+    Messagerie & \yes & \yes & \yes & \yes \\
+    \rowcolor{lightgray}
+    Tableau de bord global & \yes & Limité & \nope & \nope \\
+    Gestion documentaire & \yes & \yes & Lecture & Lecture (perso) \\
+    \rowcolor{lightgray}
+    Rapports et exports & \yes & \yes & \nope & \nope \\
+    \multicolumn{5}{l}{\textit{\color{primary}Fonctionnalités IA}} \\
+    Upload \& tagging des questions & \yes & \yes & \nope & \nope \\
+    \rowcolor{lightgray}
+    Tuteur IA conversationnel & \yes & \yes & \nope & \yes \\
+    Quiz adaptatif & \nope & \nope & \nope & \yes \\
+    \rowcolor{lightgray}
+    Examen blanc & \nope & \nope & \nope & \yes \\
+    Historique chat IA (perso) & \nope & \nope & \nope & \yes \\
+    \rowcolor{lightgray}
+    Analyse pédagogique par élève & \yes & \yes & \nope & \nope \\
+    Analyse pédagogique globale & \yes & \nope & \nope & \nope \\
+    \rowcolor{lightgray}
+    Dashboard coûts IA & \yes & \nope & \nope & \nope \\
+    Configuration IA (budget, prompts) & \yes & \nope & \nope & \nope \\
+    \bottomrule
+\end{longtable}
+
+\newpage
+
+% ====== 6. ARCHITECTURE TECHNIQUE ======
+\section{Architecture technique}
+
+\subsection{Vue d'ensemble}
+
+L'application repose sur une \highlight{architecture microservices}, permettant une séparation claire des responsabilités, un déploiement indépendant des services, et une scalabilité horizontale. Chaque microservice gère un domaine métier spécifique et expose ses fonctionnalités via une API REST sécurisée.
+
+\subsection{Stack technologique}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{>{\bfseries\color{primary}}p{4cm} p{10cm}}
+    \toprule
+    \textbf{\color{primary}Composant} & \textbf{\color{primary}Technologie} \\
+    \midrule
+    \endhead
+
+    Frontend & Angular (TypeScript) \\
+    \rowcolor{lightgray}
+    Backend & Java 17+ avec Spring Boot \\
+    Framework microservices & Spring Cloud (Gateway, Config, Discovery) \\
+    \rowcolor{lightgray}
+    API Gateway & Spring Cloud Gateway \\
+    Service Discovery & Netflix Eureka (ou Consul) \\
+    \rowcolor{lightgray}
+    Communication inter-services & REST (synchrone) + RabbitMQ ou Kafka (asynchrone) \\
+    Communication temps réel & WebSocket (STOMP / SockJS) \\
+    \rowcolor{lightgray}
+    Base de données & PostgreSQL (une instance par microservice) \\
+    Cache & Redis \\
+    \rowcolor{lightgray}
+    Stockage de fichiers & MinIO (S3-compatible) \\
+    Base vectorielle (IA) & Qdrant --- stockage et recherche d'embeddings pour le RAG \\
+    \rowcolor{lightgray}
+    LLM (IA) & OpenAI GPT-4o ou Anthropic Claude (API externe, provider abstrait) \\
+    Orchestration IA & LangChain ou Spring AI \\
+    \rowcolor{lightgray}
+    Authentification \& IAM & Keycloak (Identity Provider) + Spring Security OAuth2 Resource Server \\
+    Conteneurisation & Docker + Docker Compose \\
+    Orchestration (optionnel) & Kubernetes \\
+    \rowcolor{lightgray}
+    Monitoring & Prometheus + Grafana \\
+    Journalisation & ELK Stack (Elasticsearch, Logstash, Kibana) \\
+    \rowcolor{lightgray}
+    CI/CD & GitLab CI ou Jenkins \\
+    \bottomrule
+\end{longtable}
+
+\subsection{Identité et authentification : Keycloak}
+
+L'authentification, la gestion des utilisateurs et l'émission des tokens JWT sont déléguées à \highlight{Keycloak}, une solution open-source d'Identity and Access Management (IAM) éprouvée en production.
+
+\begin{infobox}{Pourquoi Keycloak plutôt qu'un service maison}
+Keycloak est un \textbf{composant d'infrastructure}, pas un microservice développé par l'équipe. Il fournit prêt à l'emploi : authentification multi-facteurs, OIDC/OAuth2, rôles et permissions, réinitialisation de mot de passe, audit des connexions, gestion des sessions et déconnexion centralisée.
+\end{infobox}
+
+\subsubsection{Rôle de Keycloak}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \textbf{Source de vérité de l'identité} : Keycloak détient les comptes utilisateurs, les mots de passe (hashés) et les rôles applicatifs (\texttt{OWNER}, \texttt{SECRETARY}, \texttt{MONITOR}, \texttt{CLIENT}).
+    \item \textbf{Émission des tokens JWT} signés (RS256), contenant l'identifiant utilisateur et son rôle.
+    \item \textbf{Refresh token} avec révocation possible.
+    \item \textbf{Traçabilité native} : chaque événement (connexion, déconnexion, échec d'authentification, changement de rôle, création de compte) est enregistré dans le journal d'événements de Keycloak.
+    \item \textbf{Réinitialisation de mot de passe} par email et politiques de mot de passe configurables.
+\end{itemize}
+
+\subsubsection{Articulation Keycloak / User Service}
+
+Une fonction synchronise les deux systèmes :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Lorsqu'un propriétaire ou la secrétaire crée un utilisateur, le \role{User Service} appelle l'API Admin de Keycloak pour créer le compte d'identité, puis stocke dans sa propre base les attributs métier (forfait, progression, photo, etc.).
+    \item Lors d'une mise à jour de profil, les attributs d'identité (email, nom) sont propagés vers Keycloak ; les attributs métier restent dans le \role{User Service}.
+    \item Lors d'une suppression, l'utilisateur est désactivé dans Keycloak (pas supprimé physiquement) afin de préserver la cohérence des références d'audit (\texttt{created\_by}, \texttt{updated\_by}).
+\end{itemize}
+
+\subsubsection{Sécurisation des microservices}
+
+Chaque microservice Spring Boot intègre l'adaptateur Keycloak (via Spring Security OAuth2 Resource Server). Le flux d'une requête authentifiée est le suivant :
+
+\begin{enumerate}[leftmargin=*,itemsep=4pt]
+    \item Le client Angular obtient un JWT auprès de Keycloak (flow Authorization Code + PKCE).
+    \item Le client envoie ses requêtes à l'API Gateway avec l'en-tête \texttt{Authorization: Bearer <token>}.
+    \item L'API Gateway valide la signature du token contre la clé publique de Keycloak.
+    \item Le token est propagé aux microservices en aval, qui appliquent leurs règles d'autorisation locales selon le rôle.
+\end{enumerate}
+
+\subsection{Décomposition en microservices}
+
+\begin{infobox}{Microservices proposés}
+La plateforme se décompose en services indépendants, chacun responsable d'un périmètre métier précis et disposant de sa propre base de données.
+\end{infobox}
+
+\begin{itemize}[leftmargin=*,itemsep=6pt]
+    \item \role{User Service} --- Gestion des profils métier (propriétaire, secrétaire, moniteur, client). Synchronisation des utilisateurs avec Keycloak (création, mise à jour, désactivation). Stockage des données spécifiques à l'auto-école : forfait, progression, préférences (langue, notifications), numéro de permis.
+    \item \role{Vehicle Service} --- Gestion du parc automobile, entretien et affectations.
+    \item \role{Booking Service} --- Réservation, planification, gestion des séances.
+    \item \role{Communication Service} --- Messagerie temps réel (WebSocket).
+    \item \role{Finance Service} --- Forfaits, paiements, factures.
+    \item \role{Document Service} --- Stockage et gestion documentaire (intégration MinIO).
+    \item \role{Notification Service} --- Email, SMS, notifications push.
+    \item \role{Analytics Service} --- Agrégation de données, indicateurs, reporting.
+    \item \role{AI Service} --- Tuteur conversationnel (RAG), quiz adaptatif, examen blanc, analyse pédagogique, gestion du budget API LLM. Intègre Qdrant pour les embeddings et communique avec un fournisseur LLM externe (OpenAI ou Anthropic) via une interface abstraite.
+\end{itemize}
+
+\subsection{Sécurité}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Authentification déléguée à \textbf{Keycloak} (OIDC / OAuth2), avec JWT signé en RS256 et mécanisme de Refresh Token.
+    \item Contrôle d'accès basé sur les rôles (RBAC) au niveau de l'API Gateway et de chaque microservice, à partir des rôles portés par le token.
+    \item Communication HTTPS de bout en bout (TLS 1.3).
+    \item Hash des mots de passe géré par Keycloak (PBKDF2 par défaut).
+    \item Protection contre les attaques courantes : XSS, CSRF, injection SQL, brute force (politique de verrouillage Keycloak).
+    \item Traçabilité native via le journal d'événements Keycloak (connexions, déconnexions, échecs, changements de rôle).
+    \item Colonnes d'audit applicatives (\texttt{created\_by}, \texttt{updated\_by}, \texttt{created\_at}, \texttt{updated\_at}) sur les entités métier, alimentées automatiquement par Spring Data JPA via l'identité extraite du JWT.
+    \item Conformité avec les bonnes pratiques de protection des données personnelles.
+\end{itemize}
+
+\newpage
+
+% ====== 6. EXIGENCES NON FONCTIONNELLES ======
+\section{Exigences non fonctionnelles}
+
+\subsection{Performance}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Temps de réponse moyen inférieur à 500 ms pour les requêtes courantes.
+    \item Latence des messages WebSocket inférieure à 200 ms.
+    \item Capacité de traiter au moins 200 utilisateurs simultanés en phase initiale.
+    \item Architecture scalable horizontalement pour absorber la croissance.
+\end{itemize}
+
+\subsection{Disponibilité}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Disponibilité cible : 99{,}5\% (hors maintenance planifiée).
+    \item Maintenance planifiée annoncée 48h à l'avance.
+    \item Sauvegardes quotidiennes des bases de données.
+\end{itemize}
+
+\subsection{Ergonomie et accessibilité}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Interface responsive (desktop, tablette, smartphone).
+    \item Compatibilité avec les navigateurs récents (Chrome, Firefox, Edge, Safari).
+    \item Respect des bonnes pratiques d'accessibilité (WCAG 2.1 niveau AA).
+    \item Interface en français (multilingue envisageable en évolution).
+\end{itemize}
+
+\subsection{Maintenabilité}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Code documenté et conforme aux standards (Java : conventions Spring ; Angular : style guide officiel).
+    \item Tests unitaires (couverture cible : 70\% minimum).
+    \item Tests d'intégration entre microservices.
+    \item Documentation technique des API (Swagger / OpenAPI).
+\end{itemize}
+
+\subsection{Portabilité et déploiement}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Conteneurisation Docker pour chaque microservice.
+    \item Docker Compose pour l'environnement de développement.
+    \item Possibilité de déploiement sur un cluster Kubernetes en production.
+\end{itemize}
+
+\newpage
+
+% ====== STRATÉGIE CI/CD ======
+\section{Stratégie d'intégration et de déploiement continus (CI/CD)}
+
+\subsection{Vue d'ensemble}
+
+L'architecture microservices impose une discipline forte d'automatisation. Sans pipeline CI/CD, la coordination de neuf services indépendants devient rapidement ingérable. Le projet adopte donc une démarche \highlight{CI/CD complète} dès le démarrage, fondée sur les principes suivants :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Chaque microservice dispose de son propre dépôt Git et de sa propre pipeline.
+    \item Tout commit déclenche automatiquement un cycle de build, de tests et d'analyse.
+    \item Les artefacts produits (images Docker) sont versionnés et stockés dans un registry centralisé.
+    \item Le déploiement vers les environnements de développement et de pré-production est automatique ; la mise en production reste une action manuelle validée.
+    \item L'infrastructure est décrite sous forme de code (Infrastructure as Code).
+\end{itemize}
+
+\begin{infobox}{Outillage retenu}
+\textbf{Plateforme CI/CD} : GitLab CI (offre gratuite GitLab.com). \\
+\textbf{Structure du code} : multi-dépôts (un dépôt par microservice + un dépôt d'infrastructure). \\
+\textbf{Cible de déploiement} : Cluster Kubernetes managé en cloud (AWS EKS, Azure AKS ou GCP GKE selon arbitrage final).
+\end{infobox}
+
+\subsection{Structure des dépôts et conventions}
+
+\subsubsection{Organisation multi-dépôts}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Un dépôt Git par microservice (\texttt{user-service}, \texttt{vehicle-service}, \texttt{booking-service}, etc.).
+    \item Un dépôt dédié au frontend Angular.
+    \item Un dépôt central \texttt{infra} contenant les manifestes Kubernetes globaux, les configurations Keycloak, les fichiers Helm, le \texttt{docker-compose.yml} de développement local, et le fichier de versions consolidées.
+    \item Un dépôt \texttt{ci-templates} contenant les templates de pipelines partagés entre microservices.
+\end{itemize}
+
+\subsubsection{Stratégie de branches}
+
+Le projet suit un modèle Gitflow simplifié :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \texttt{main} --- branche de production, protégée.
+    \item \texttt{develop} --- branche d'intégration, environnement de staging.
+    \item \texttt{feature/xxx} --- développement d'une fonctionnalité.
+    \item \texttt{hotfix/xxx} --- correctifs urgents en production.
+\end{itemize}
+
+\subsubsection{Versionnement des artefacts}
+
+Chaque image Docker est taguée selon trois schémas complémentaires :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \texttt{<service>:<commit-sha>} --- tag immuable, traçabilité absolue.
+    \item \texttt{<service>:develop} --- dernière version stable de staging.
+    \item \texttt{<service>:latest} --- dernière version stable de production (sur \texttt{main}).
+\end{itemize}
+
+\subsection{Pipeline d'intégration continue (CI)}
+
+Chaque microservice exécute le même squelette de pipeline, défini dans un template partagé pour éviter la duplication.
+
+\renewcommand{\arraystretch}{1.4}
+\begin{longtable}{>{\bfseries\color{primary}}p{3cm} p{4.5cm} p{6cm}}
+    \toprule
+    \textbf{\color{primary}Étape} & \textbf{\color{primary}Outils} & \textbf{\color{primary}Action} \\
+    \midrule
+    \endhead
+
+    Build & Maven, Node.js & Compilation du code, résolution des dépendances. \\
+    \rowcolor{lightgray}
+    Tests unitaires & JUnit 5, Mockito, Jasmine & Exécution des tests unitaires avec rapport de couverture. \\
+    Analyse qualité & SonarCloud & Détection des bugs, code smells, dette technique. Seuil de couverture minimum : 70\%. \\
+    \rowcolor{lightgray}
+    Standards de code & Checkstyle, SpotBugs, ESLint, Prettier & Application des conventions de style et des bonnes pratiques. \\
+    Scan des dépendances & OWASP Dependency-Check & Identification des bibliothèques tierces vulnérables. \\
+    \rowcolor{lightgray}
+    Build image Docker & Docker, Dockerfile multi-stage & Construction d'une image légère prête à déployer. \\
+    Scan image Docker & Trivy & Détection des vulnérabilités dans l'image (CVE, secrets, mauvaises configurations). \\
+    \rowcolor{lightgray}
+    Publication & GitLab Container Registry & Stockage de l'image versionnée. \\
+    \bottomrule
+\end{longtable}
+
+\subsection{Pipeline de déploiement continu (CD)}
+
+\subsubsection{Environnements cibles}
+
+Trois environnements isolés en termes de namespace Kubernetes et de bases de données :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \role{Développement} (\texttt{auto-ecole-dev}) --- déploiement automatique sur push de la branche \texttt{develop}. Données de test.
+    \item \role{Pré-production / Staging} (\texttt{auto-ecole-staging}) --- déploiement automatique après validation de la CI sur \texttt{develop}. Données représentatives, examens blancs.
+    \item \role{Production} (\texttt{auto-ecole-prod}) --- déploiement \textbf{manuel} (validation explicite via bouton dans GitLab) sur push de la branche \texttt{main}. Données réelles.
+\end{itemize}
+
+\subsubsection{Stratégie de déploiement}
+
+Le déploiement utilise la stratégie \textbf{Rolling Update} native de Kubernetes : les pods sont remplacés progressivement, garantissant une disponibilité continue. Chaque déploiement valide les conditions suivantes avant de passer au pod suivant :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Sondes \texttt{readinessProbe} et \texttt{livenessProbe} exposées par chaque service via Spring Boot Actuator.
+    \item Rollback automatique en cas d'échec du déploiement (\texttt{kubectl rollout undo}).
+    \item Tests de fumée (smoke tests) exécutés après déploiement pour valider le bon fonctionnement.
+\end{itemize}
+
+\subsubsection{Gestion des migrations de base de données}
+
+Les évolutions de schéma de base de données sont versionnées avec \textbf{Flyway} (ou Liquibase). Les scripts de migration sont exécutés automatiquement au démarrage de chaque microservice, garantissant la cohérence entre le code et le schéma de données.
+
+\subsection{Gestion des secrets et configuration}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Aucun secret (mot de passe, clé API LLM, credentials Keycloak admin) n'est versionné dans le code.
+    \item Les secrets sont stockés dans \textbf{GitLab CI/CD Variables} (masquées, protégées) pour les pipelines.
+    \item En cluster, les secrets sont gérés par \textbf{Kubernetes Secrets}, idéalement chiffrés au repos (Sealed Secrets, External Secrets Operator ou intégration avec un coffre-fort cloud type AWS Secrets Manager).
+    \item Les configurations non sensibles utilisent des \textbf{ConfigMaps} Kubernetes.
+\end{itemize}
+
+\subsection{Orchestration multi-dépôts}
+
+L'architecture multi-dépôts soulève la question de la coordination des déploiements globaux. Deux mécanismes complémentaires sont mis en place :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item \textbf{Fichier de versions centralisé} (\texttt{versions.yaml} dans le dépôt \texttt{infra}) listant la version actuellement déployée de chaque microservice en production. Mis à jour automatiquement par la pipeline de chaque service après déploiement réussi.
+    \item \textbf{Pipeline triggers inter-projets} : la pipeline d'un microservice peut déclencher une pipeline en aval dans le dépôt \texttt{infra} pour orchestrer un déploiement coordonné.
+\end{itemize}
+
+\subsection{Phases de mise en place de la CI/CD}
+
+La construction de la chaîne CI/CD se fait par incréments, en commençant par un service pilote (typiquement le \texttt{user-service}) puis en généralisant.
+
+\renewcommand{\arraystretch}{1.4}
+\begin{longtable}{>{\bfseries\color{primary}}p{1.7cm} p{6cm} p{6cm}}
+    \toprule
+    \textbf{\color{primary}Phase} & \textbf{\color{primary}Objectif} & \textbf{\color{primary}Livrables} \\
+    \midrule
+    \endhead
+
+    Phase 0 & Préparation : choix du cloud, conventions de branches, conventions de tags, provisioning du registry et du cluster Kubernetes. & Cluster Kubernetes opérationnel, dépôts Git initialisés, conventions documentées. \\
+    \rowcolor{lightgray}
+    Phase 1 & CI basique : build et tests unitaires par microservice. & Pipeline \texttt{.gitlab-ci.yml} fonctionnel sur chaque dépôt avec stages build et test. \\
+    Phase 2 & CI complète : analyse qualité (SonarCloud), scan de dépendances (OWASP), build d'image Docker, scan d'image (Trivy), publication au registry. & Image Docker versionnée et scannée pour chaque commit. \\
+    \rowcolor{lightgray}
+    Phase 3 & CD automatique : déploiement automatique sur \texttt{dev} et \texttt{staging}, manuel sur \texttt{prod}. Manifestes Kubernetes complets. & Déploiement reproductible sur les trois environnements. \\
+    Phase 4 & Orchestration multi-dépôts : dépôt \texttt{infra}, fichier \texttt{versions.yaml}, triggers inter-projets, templates partagés. & Cohérence des déploiements multi-services. \\
+    \rowcolor{lightgray}
+    Phase 5 & Observabilité : monitoring (Prometheus + Grafana), logs centralisés (ELK ou Loki), tracing distribué (Jaeger), tests d'intégration E2E (Postman/Newman, Cypress). & Vue temps réel de l'état du système, capacité de diagnostic. \\
+    \bottomrule
+\end{longtable}
+
+\subsection{Indicateurs de qualité visés}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Couverture de tests unitaires : 70\% minimum par microservice.
+    \item Durée d'une pipeline complète : moins de 10 minutes par microservice.
+    \item Aucune vulnérabilité critique ou élevée non corrigée dans les images Docker publiées.
+    \item Temps de déploiement (de \texttt{develop} à \texttt{staging}) : moins de 5 minutes.
+    \item Taux d'échec des déploiements en production : moins de 5\%.
+\end{itemize}
+
+\newpage
+
+% ====== PLANNING ======
+\section{Planning prévisionnel}
+
+Le projet est organisé selon une méthodologie agile (Scrum) avec des sprints de deux semaines. Le planning prévisionnel ci-dessous est indicatif et pourra être ajusté.
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{>{\bfseries\color{primary}}p{1.5cm} p{6cm} p{6cm}}
+    \toprule
+    \textbf{\color{primary}Phase} & \textbf{\color{primary}Description} & \textbf{\color{primary}Livrables} \\
+    \midrule
+    \endhead
+
+    Phase 1 & Étude, conception, maquettage & Cahier des charges, maquettes UI, modèle de données \\
+    \rowcolor{lightgray}
+    Phase 2 & Mise en place de l'infrastructure & Configuration Docker, Gateway, Eureka, Keycloak (realms, rôles, clients) \\
+    Phase 3 & Développement des services métier (User, Vehicle, Booking) & Backend opérationnel pour la planification \\
+    \rowcolor{lightgray}
+    Phase 4 & Développement des services Finance \& Document & Forfaits, paiements, gestion documentaire \\
+    Phase 5 & Communication temps réel & WebSocket, messagerie, notifications \\
+    \rowcolor{lightgray}
+    Phase 6 & Module IA --- Tuteur RAG, quiz adaptatif, examen blanc & ai-service, Qdrant, ingestion documentaire, intégration LLM \\
+    Phase 7 & Frontend Angular & Interfaces des 4 rôles \\
+    \rowcolor{lightgray}
+    Phase 8 & Analytics, dashboard pédagogique IA, dashboard coûts & Indicateurs, exports, reporting, vue propriétaire \\
+    Phase 9 & Tests, recette, déploiement & Application prête à la mise en production \\
+    \bottomrule
+\end{longtable}
+
+\newpage
+
+% ====== 8. CONTRAINTES ET LIVRABLES ======
+\section{Contraintes et livrables}
+
+\subsection{Contraintes}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Respect des technologies imposées (Java/Spring Boot, Angular, PostgreSQL).
+    \item Architecture obligatoirement microservices.
+    \item Communication temps réel via WebSocket.
+    \item Respect des règles de protection des données personnelles.
+    \item Documentation complète à fournir avec le code source.
+\end{itemize}
+
+\subsection{Livrables attendus}
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Code source complet (backend, frontend, scripts de déploiement).
+    \item Documentation technique (architecture, API, base de données).
+    \item Documentation utilisateur (manuels par rôle).
+    \item Jeux de tests (unitaires et d'intégration).
+    \item Environnement Docker prêt à l'emploi.
+    \item Rapport de recette et procès-verbal de réception.
+\end{itemize}
+
+\newpage
+
+% ====== 9. ÉVOLUTIONS FUTURES ======
+\section{Évolutions envisagées}
+
+Les fonctionnalités suivantes sont identifiées comme évolutions potentielles pour des versions ultérieures :
+
+\begin{itemize}[leftmargin=*,itemsep=4pt]
+    \item Application mobile native (iOS / Android).
+    \item Paiement en ligne intégré (Stripe, gateway local).
+    \item Module e-learning pour l'apprentissage du code en ligne.
+    \item Géolocalisation des points de rendez-vous et suivi du véhicule.
+    \item Analyse d'image par IA (l'élève photographie un panneau, l'IA explique la règle associée).
+    \item Migration vers un LLM auto-hébergé (LLaMA, Mistral) pour réduire la dépendance à un fournisseur externe et améliorer la confidentialité.
+    \item Gamification de l'apprentissage : badges, séries (streaks), niveaux, classements opt-in.
+    \item Module multi-établissements pour les réseaux d'auto-écoles.
+    \item Application multilingue étendue (anglais, autres langues régionales).
+\end{itemize}
+
+\newpage
+
+% ====== 10. GLOSSAIRE ======
+\section{Glossaire}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{longtable}{>{\bfseries\color{primary}}p{3.5cm} p{10cm}}
+    \toprule
+    \textbf{\color{primary}Terme} & \textbf{\color{primary}Définition} \\
+    \midrule
+    \endhead
+
+    API & Application Programming Interface --- interface permettant à des applications de communiquer entre elles. \\
+    \rowcolor{lightgray}
+    JWT & JSON Web Token, format de jeton sécurisé utilisé pour l'authentification. \\
+    Microservice & Architecture logicielle décomposant une application en services indépendants. \\
+    \rowcolor{lightgray}
+    RBAC & Role-Based Access Control --- modèle de gestion des permissions basé sur les rôles. \\
+    REST & Representational State Transfer --- style d'architecture pour les API web. \\
+    \rowcolor{lightgray}
+    WebSocket & Protocole de communication bidirectionnelle en temps réel. \\
+    Forfait & Pack d'heures de conduite et/ou de séances de code vendu à l'élève. \\
+    \rowcolor{lightgray}
+    Gateway & Point d'entrée unique vers les microservices. \\
+    Eureka & Service de découverte de microservices de la suite Spring Cloud. \\
+    \rowcolor{lightgray}
+    MinIO & Système de stockage objet compatible avec Amazon S3. \\
+    LLM & Large Language Model --- grand modèle de langage capable de comprendre et générer du texte (ex: GPT-4o, Claude). \\
+    \rowcolor{lightgray}
+    RAG & Retrieval-Augmented Generation --- technique combinant un LLM avec une base documentaire pour produire des réponses ancrées dans des sources fiables. \\
+    Embedding & Représentation vectorielle d'un texte permettant de mesurer sa similarité avec d'autres textes. \\
+    \rowcolor{lightgray}
+    Base vectorielle & Base de données spécialisée dans la recherche de similarité entre vecteurs (Qdrant, pgvector). \\
+    Hallucination & Production par un LLM d'une information fausse ou inventée, présentée avec assurance. \\
+    \rowcolor{lightgray}
+    Chunking & Découpage d'un document en passages courts pour l'indexation et la recherche. \\
+    Streaming (LLM) & Diffusion progressive de la réponse du modèle, token par token, sans attendre la fin de génération. \\
+    \rowcolor{lightgray}
+    Keycloak & Solution open-source de gestion d'identité et d'accès (IAM), utilisée pour l'authentification, les rôles et l'émission des tokens. \\
+    IAM & Identity and Access Management --- gestion centralisée des identités et des autorisations. \\
+    \rowcolor{lightgray}
+    OIDC & OpenID Connect --- protocole d'authentification construit sur OAuth 2.0. \\
+    PKCE & Proof Key for Code Exchange --- extension d'OAuth 2.0 sécurisant l'échange de code pour les clients publics (SPA, mobile). \\
+    \rowcolor{lightgray}
+    CI/CD & Continuous Integration / Continuous Delivery --- pratiques d'automatisation du build, des tests et du déploiement. \\
+    GitOps & Pratique consistant à utiliser un dépôt Git comme source de vérité de l'infrastructure et des déploiements. \\
+    \bottomrule
+\end{longtable}
+
+\vfill
+\begin{center}
+    {\color{primary}\rule{0.5\textwidth}{0.5pt}}\\
+    \vspace{0.3cm}
+    {\small\color{darkgray}Fin du document}
+\end{center}
+
+\end{document}
