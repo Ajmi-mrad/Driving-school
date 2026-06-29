@@ -1,0 +1,58 @@
+services:
+  # PostgreSQL dédié au vehicle-service.
+  vehicle-postgres:
+    image: postgres:16-alpine
+    container_name: vehicle-postgres
+    environment:
+      POSTGRES_DB: ${VEHICLE_DB_NAME:-vehicledb}
+      POSTGRES_USER: ${VEHICLE_DB_USER:-vehicleuser}
+      POSTGRES_PASSWORD: ${VEHICLE_DB_PASSWORD:-vehiclepass}
+    ports:
+      - "5434:5432"   # exposé en 5434 (auth-postgres = 5433)
+    volumes:
+      - vehicle-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${VEHICLE_DB_USER:-vehicleuser} -d ${VEHICLE_DB_NAME:-vehicledb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auto-ecole
+
+  vehicle-service:
+    build: .
+    container_name: vehicle-service
+    environment:
+      VEHICLE_DB_URL: jdbc:postgresql://vehicle-postgres:5432/${VEHICLE_DB_NAME:-vehicledb}
+      VEHICLE_DB_USER: ${VEHICLE_DB_USER:-vehicleuser}
+      VEHICLE_DB_PASSWORD: ${VEHICLE_DB_PASSWORD:-vehiclepass}
+      # Keycloak joignable via le réseau partagé de la stack auth-service
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
+      SERVER_PORT: 8082
+      # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
+      EUREKA_ENABLED: "true"
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka
+    ports:
+      - "8082:8082"
+    depends_on:
+      vehicle-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - auto-ecole
+
+volumes:
+  vehicle-postgres-data:
+
+# Réseau partagé créé par la stack auth-service (contient Keycloak).
+# Prérequis : la stack auth-service doit tourner (docker compose up dans auth-service/).
+networks:
+  auto-ecole:
+    external: true
+    name: auth-service_auto-ecole

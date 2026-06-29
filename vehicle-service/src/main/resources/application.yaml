@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: vehicle-service
+
+  datasource:
+    url: ${VEHICLE_DB_URL:jdbc:postgresql://localhost:5434/vehicledb}
+    username: ${VEHICLE_DB_USER:vehicleuser}
+    password: ${VEHICLE_DB_PASSWORD:vehiclepass}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate          # Flyway possède le schéma ; Hibernate ne fait que valider
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Resource server : validation par la JWKS du realm (signature). Accepte les tokens
+          # obtenus côté hôte (localhost:8080) même quand le service tourne en conteneur.
+          jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8080/realms/auto-ecole/protocol/openid-connect/certs}
+
+# Eureka : prêt mais OFF par défaut (activable via EUREKA_ENABLED=true quand un discovery-service existe)
+eureka:
+  client:
+    enabled: ${EUREKA_ENABLED:false}
+    register-with-eureka: ${EUREKA_ENABLED:false}
+    fetch-registry: ${EUREKA_ENABLED:false}
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-service:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+server:
+  port: ${SERVER_PORT:8082}   # 8080=Keycloak, 8081=auth-service
