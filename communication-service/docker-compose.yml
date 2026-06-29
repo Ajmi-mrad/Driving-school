@@ -1,0 +1,60 @@
+services:
+  # PostgreSQL dédié au communication-service.
+  communication-postgres:
+    image: postgres:16-alpine
+    container_name: communication-postgres
+    environment:
+      POSTGRES_DB: ${COMMUNICATION_DB_NAME:-communicationdb}
+      POSTGRES_USER: ${COMMUNICATION_DB_USER:-communicationuser}
+      POSTGRES_PASSWORD: ${COMMUNICATION_DB_PASSWORD:-communicationpass}
+    ports:
+      - "5436:5432"   # exposé en 5436 (auth=5433, vehicle=5434, booking=5435)
+    volumes:
+      - communication-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${COMMUNICATION_DB_USER:-communicationuser} -d ${COMMUNICATION_DB_NAME:-communicationdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auto-ecole
+
+  communication-service:
+    build: .
+    container_name: communication-service
+    environment:
+      COMMUNICATION_DB_URL: jdbc:postgresql://communication-postgres:5432/${COMMUNICATION_DB_NAME:-communicationdb}
+      COMMUNICATION_DB_USER: ${COMMUNICATION_DB_USER:-communicationuser}
+      COMMUNICATION_DB_PASSWORD: ${COMMUNICATION_DB_PASSWORD:-communicationpass}
+      # Keycloak joignable via le réseau partagé de la stack auth-service
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
+      SERVER_PORT: 8084
+      # Origine autorisée pour le handshake WebSocket (front Angular)
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
+      # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
+      EUREKA_ENABLED: "true"
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka
+    ports:
+      - "8084:8084"
+    depends_on:
+      communication-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - auto-ecole
+
+volumes:
+  communication-postgres-data:
+
+# Réseau partagé créé par la stack auth-service (contient Keycloak + discovery-service).
+# Prérequis : la stack auth-service doit tourner (docker compose up dans auth-service/).
+networks:
+  auto-ecole:
+    external: true
+    name: auth-service_auto-ecole
