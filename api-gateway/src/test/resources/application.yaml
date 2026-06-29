@@ -1,0 +1,14 @@
+# Profil de test : pas de découverte Eureka, et un jwk-set-uri factice (le JwtDecoder est créé
+# paresseusement, donc aucun appel réseau n'est fait au chargement du contexte).
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9999/realms/test/protocol/openid-connect/certs
