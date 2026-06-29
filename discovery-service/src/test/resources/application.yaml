@@ -1,0 +1,6 @@
+# Profil de test : le serveur Eureka ne s'enregistre pas et ne récupère pas de registre, mais on
+# laisse les beans client Eureka présents (le serveur en dépend, ex. ApplicationInfoManager).
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
