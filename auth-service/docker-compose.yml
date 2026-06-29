@@ -1,0 +1,171 @@
+services:
+  # ---- PostgreSQL dédié à Keycloak ----
+  kc-postgres:
+    image: postgres:16-alpine
+    container_name: kc-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: ${KC_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+    volumes:
+      - kc-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak} -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auto-ecole
+
+  # ---- PostgreSQL dédié à l'auth-service ----
+  auth-postgres:
+    image: postgres:16-alpine
+    container_name: auth-postgres
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:-authdb}
+      POSTGRES_USER: ${AUTH_DB_USER:-authuser}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-authpass}
+    ports:
+      - "5433:5432"   # exposé sur 5433 pour ne pas entrer en conflit avec un Postgres local
+    volumes:
+      - auth-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-authuser} -d ${AUTH_DB_NAME:-authdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auto-ecole
+
+  # ---- Keycloak (Identity Provider) ----
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.3
+    container_name: keycloak
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://kc-postgres:5432/keycloak
+      KC_DB_USERNAME: ${KC_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+      KC_HEALTH_ENABLED: "true"
+      # URL frontend fixe : les liens générés (emails de reset, etc.) utilisent localhost:8080
+      # (joignable depuis le navigateur de l'hôte) ; le backchannel reste dynamique pour les
+      # appels internes auth-service -> keycloak:8080.
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Import automatique du realm auto-ecole au démarrage
+      - ./realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      kc-postgres:
+        condition: service_healthy
+    healthcheck:
+      # L'image Keycloak n'a ni curl ni wget : on interroge /health/ready (port mgmt 9000) via bash /dev/tcp
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000; printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - auto-ecole
+
+  # ---- auth-service (User Service) ----
+  auth-service:
+    build: .
+    container_name: auth-service
+    environment:
+      AUTH_DB_URL: jdbc:postgresql://auth-postgres:5432/${AUTH_DB_NAME:-authdb}
+      AUTH_DB_USER: ${AUTH_DB_USER:-authuser}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-authpass}
+      # En réseau docker, Keycloak est joignable via son nom de service
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_AUTH_SERVICE_SECRET: ${KEYCLOAK_AUTH_SERVICE_SECRET:-changeme}
+      SERVER_PORT: 8081
+      EUREKA_ENABLED: "true"
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka
+    ports:
+      - "8081:8081"
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      # 401 accepté tant que la SecurityFilterChain (étape 3) n'expose pas encore /actuator/health
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/actuator/health | grep -qE '200|401'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - auto-ecole
+
+  # ---- Mailpit : SMTP de dev + boîte de réception web (capture les emails envoyés par Keycloak) ----
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    ports:
+      - "8025:8025"   # interface web : consulter les emails sur http://localhost:8025
+      - "1025:1025"   # SMTP : utilisé par Keycloak (host "mailpit", port 1025)
+    networks:
+      - auto-ecole
+
+  # ---- discovery-service (Eureka) : registre des microservices ----
+  # Vérifier l'enregistrement de AUTH-SERVICE / VEHICLE-SERVICE / API-GATEWAY sur http://localhost:8761.
+  discovery-service:
+    build: ../discovery-service
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - auto-ecole
+
+  # ---- api-gateway (Spring Cloud Gateway) : point d'entrée unique des API ----
+  # Route /api/** vers les microservices via Eureka (lb://), valide la signature du JWT Keycloak.
+  api-gateway:
+    build: ../api-gateway
+    container_name: api-gateway
+    environment:
+      SERVER_PORT: 8222
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
+      EUREKA_ENABLED: "true"
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
+    ports:
+      - "8222:8222"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8222/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - auto-ecole
+
+volumes:
+  kc-postgres-data:
+  auth-postgres-data:
+
+networks:
+  auto-ecole:
+    driver: bridge

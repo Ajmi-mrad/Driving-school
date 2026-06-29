@@ -1,0 +1,69 @@
+package com.example.authservice.exception;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+
+import java.util.stream.Collectors;
+
+/**
+ * Gestion d'erreurs centralisée → réponses {@link ProblemDetail} (RFC 7807).
+ *
+ * <p>Étend {@link ResponseEntityExceptionHandler} pour que les exceptions natives de Spring MVC
+ * (méthode non supportée → 405, ressource introuvable → 404, corps illisible → 400, etc.)
+ * conservent leur bon code de statut au lieu d'être absorbées par le handler générique.</p>
+ */
+@RestControllerAdvice
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ProblemDetail handleNotFound(UserNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(DuplicateUserException.class)
+    public ProblemDetail handleDuplicate(DuplicateUserException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        // Couvre AuthorizationDeniedException (méthode @PreAuthorize) ; renvoie 403 plutôt que 500.
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Accès refusé");
+    }
+
+    @ExceptionHandler(KeycloakOperationException.class)
+    public ProblemDetail handleKeycloak(KeycloakOperationException ex) {
+        log.error("Opération Keycloak en échec", ex);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, ex.getMessage());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleUnexpected(Exception ex) {
+        log.error("Erreur inattendue", ex);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne");
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        String details = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(Collectors.joining("; "));
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, details);
+        problem.setTitle("Validation échouée");
+        return handleExceptionInternal(ex, problem, headers, HttpStatus.BAD_REQUEST, request);
+    }
+}

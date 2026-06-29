@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5433/authdb}
+    username: ${AUTH_DB_USER:authuser}
+    password: ${AUTH_DB_PASSWORD:authpass}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate          # Flyway possède le schéma ; Hibernate ne fait que valider
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Validation par la JWKS du realm : on vérifie la signature (clé publique Keycloak),
+          # ce qui permet d'accepter les tokens obtenus côté hôte (localhost:8080) même quand le
+          # service tourne en conteneur et joint Keycloak via keycloak:8080.
+          # NB: en production, valider aussi l'émetteur via un hostname Keycloak fixe.
+          jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8080/realms/auto-ecole/protocol/openid-connect/certs}
+
+# Propriétés custom pour le client Admin Keycloak (étape 4)
+keycloak:
+  server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8080}
+  realm: ${KEYCLOAK_REALM:auto-ecole}
+  client-id: ${KEYCLOAK_CLIENT_ID:auth-service}
+  client-secret: ${KEYCLOAK_AUTH_SERVICE_SECRET:changeme}
+
+# Eureka : prêt mais OFF par défaut. Pour l'activer (quand un discovery-service existe),
+# il suffit de passer EUREKA_ENABLED=true — aucun changement de code requis.
+eureka:
+  client:
+    enabled: ${EUREKA_ENABLED:false}
+    register-with-eureka: ${EUREKA_ENABLED:false}
+    fetch-registry: ${EUREKA_ENABLED:false}
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://discovery-service:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+server:
+  port: ${SERVER_PORT:8081}   # 8080 est pris par Keycloak

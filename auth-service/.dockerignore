@@ -1,0 +1,15 @@
+target/
+.git
+.gitignore
+.gitattributes
+.idea
+*.iml
+*.iws
+*.ipr
+.mvn/wrapper/maven-wrapper.jar
+.env
+HELP.md
+*.md
+cahier_des_charges.*
+docker-compose.yml
+Dockerfile
