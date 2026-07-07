@@ -41,6 +41,7 @@ booking:
     registration-id: keycloak
     auth-service-url: ${AUTH_SERVICE_URL:http://auth-service}
     vehicle-service-url: ${VEHICLE_SERVICE_URL:http://vehicle-service}
+    finance-service-url: ${FINANCE_SERVICE_URL:http://finance-service}
 
 eureka:
   client:

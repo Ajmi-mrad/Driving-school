@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Env ###
+# Secrets locaux : ne pas committer. Modèle suivi : .env.example
+.env
+!.env.example

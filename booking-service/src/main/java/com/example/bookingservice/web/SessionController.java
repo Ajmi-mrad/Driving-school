@@ -89,4 +89,11 @@ public class SessionController {
                                       JwtAuthenticationToken auth) {
         return sessionService.reschedule(id, request, AuthSupport.sub(auth), AuthSupport.roles(auth));
     }
+
+    /** Clôture d'une séance réalisée : signale la consommation au finance-service. */
+    @PatchMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY','MONITOR')")
+    public SessionResponse complete(@PathVariable UUID id) {
+        return sessionService.complete(id);
+    }
 }

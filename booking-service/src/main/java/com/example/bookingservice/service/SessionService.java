@@ -1,5 +1,6 @@
 package com.example.bookingservice.service;
 
+import com.example.bookingservice.client.FinanceClient;
 import com.example.bookingservice.client.UserClient;
 import com.example.bookingservice.client.VehicleClient;
 import com.example.bookingservice.client.dto.UserInfo;
@@ -24,6 +25,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -57,15 +60,17 @@ public class SessionService {
     private final BookingSettingsService settingsService;
     private final UserClient userClient;
     private final VehicleClient vehicleClient;
+    private final FinanceClient financeClient;
 
     public SessionService(SessionRepository sessionRepository, SessionMapper sessionMapper,
                           BookingSettingsService settingsService, UserClient userClient,
-                          VehicleClient vehicleClient) {
+                          VehicleClient vehicleClient, FinanceClient financeClient) {
         this.sessionRepository = sessionRepository;
         this.sessionMapper = sessionMapper;
         this.settingsService = settingsService;
         this.userClient = userClient;
         this.vehicleClient = vehicleClient;
+        this.financeClient = financeClient;
     }
 
     @Transactional
@@ -238,7 +243,53 @@ public class SessionService {
         return sessionMapper.toResponse(sessionRepository.save(session));
     }
 
+    /**
+     * Clôture une séance confirmée (statut {@code COMPLETED}) et signale la consommation
+     * correspondante au finance-service (heures de conduite dérivées de la durée, ou une séance de
+     * code). Le décompte financier est « best-effort » et n'empêche pas la clôture.
+     */
+    @Transactional
+    public SessionResponse complete(UUID id) {
+        Session session = findOrThrow(id);
+        requireStatus(session, SessionStatus.CONFIRMED, "Seule une séance confirmée peut être clôturée");
+        // Une séance ne peut être clôturée (et sa consommation décomptée) qu'une fois réellement terminée.
+        if (session.getEndTime().isAfter(Instant.now())) {
+            throw new InvalidSessionStateException(
+                    "Une séance ne peut être clôturée qu'après sa fin (fin prévue: " + session.getEndTime() + ")");
+        }
+        session.setStatus(SessionStatus.COMPLETED);
+        SessionResponse response = sessionMapper.toResponse(sessionRepository.save(session));
+
+        String clientId = session.getClientId();
+        int drivingHours = session.getType() == SessionType.DRIVING ? durationHours(session) : 0;
+        int codeSessions = session.getType() == SessionType.CODE ? 1 : 0;
+        // Décompte financier APRÈS le commit : hors transaction (aucune connexion DB retenue pendant
+        // l'appel réseau) et sans jamais faire échouer la clôture déjà validée.
+        runAfterCommit(() -> financeClient.reportConsumption(clientId, drivingHours, codeSessions));
+        return response;
+    }
+
+    /** Exécute l'action après le commit de la transaction courante, ou immédiatement s'il n'y en a pas. */
+    private void runAfterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
+    }
+
     // ---- helpers ----
+
+    /** Durée de la séance arrondie à l'heure supérieure (au moins 1h). */
+    private int durationHours(Session session) {
+        long minutes = ChronoUnit.MINUTES.between(session.getStartTime(), session.getEndTime());
+        return (int) Math.max(1, Math.ceil(minutes / 60.0));
+    }
 
     private void ensureNoConflict(Session session) {
         UUID self = session.getId();
