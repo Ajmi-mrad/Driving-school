@@ -8,6 +8,7 @@ import com.example.communicationservice.web.dto.PresenceResponse;
 import com.example.communicationservice.web.dto.UnreadCountResponse;
 import com.example.communicationservice.ws.PresenceRegistry;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -75,7 +76,7 @@ public class ConversationController {
 
     @GetMapping("/{id}/messages")
     public Page<MessageResponse> messages(@PathVariable UUID id,
-                                          @PageableDefault(size = 30) Pageable pageable,
+                                          @PageableDefault(size = 30) @ParameterObject Pageable pageable,
                                           JwtAuthenticationToken auth) {
         return conversationService.getMessages(id, AuthSupport.sub(auth), pageable);
     }

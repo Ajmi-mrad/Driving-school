@@ -11,6 +11,7 @@ import com.example.communicationservice.repository.MessageRepository;
 import com.example.communicationservice.web.dto.ConversationResponse;
 import com.example.communicationservice.web.dto.MessageResponse;
 import com.example.communicationservice.web.dto.SendMessageRequest;
+import com.example.communicationservice.ws.PresenceRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -48,6 +49,10 @@ class ConversationServiceTest {
     private CommunicationMapper mapper;
     @Mock
     private SimpMessagingTemplate messagingTemplate;
+    @Mock
+    private PresenceRegistry presenceRegistry;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private ConversationService service;
@@ -155,6 +160,21 @@ class ConversationServiceTest {
         // Diffusion au destinataire (le moniteur) ET echo à l'expéditeur.
         verify(messagingTemplate).convertAndSendToUser("m", "/queue/messages", mapped);
         verify(messagingTemplate).convertAndSendToUser("c", "/queue/messages", mapped);
+        // Destinataire hors-ligne (présence par défaut = false) → une notification est déposée.
+        verify(notificationService).notifyNewMessage(eq("m"), eq(conversation), eq("Bonjour"));
+    }
+
+    @Test
+    void handleIncomingMessage_whenRecipientOnline_doesNotCreateNotification() {
+        UUID id = UUID.randomUUID();
+        Conversation conversation = conversation(id, "m", "c");
+        when(conversationRepository.findById(id)).thenReturn(Optional.of(conversation));
+        when(messageRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(presenceRegistry.isOnline("m")).thenReturn(true);
+
+        service.handleIncomingMessage("c", new SendMessageRequest(id, "Bonjour"));
+
+        verify(notificationService, never()).notifyNewMessage(any(), any(), any());
     }
 
     @Test

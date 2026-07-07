@@ -8,6 +8,7 @@ import com.example.communicationservice.exception.NotAParticipantException;
 import com.example.communicationservice.mapper.CommunicationMapper;
 import com.example.communicationservice.repository.ConversationRepository;
 import com.example.communicationservice.repository.MessageRepository;
+import com.example.communicationservice.ws.PresenceRegistry;
 import com.example.communicationservice.web.dto.ConversationResponse;
 import com.example.communicationservice.web.dto.MessageResponse;
 import com.example.communicationservice.web.dto.SendMessageRequest;
@@ -38,15 +39,21 @@ public class ConversationService {
     private final MessageRepository messageRepository;
     private final CommunicationMapper mapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PresenceRegistry presenceRegistry;
+    private final NotificationService notificationService;
 
     public ConversationService(ConversationRepository conversationRepository,
                                MessageRepository messageRepository,
                                CommunicationMapper mapper,
-                               SimpMessagingTemplate messagingTemplate) {
+                               SimpMessagingTemplate messagingTemplate,
+                               PresenceRegistry presenceRegistry,
+                               NotificationService notificationService) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.mapper = mapper;
         this.messagingTemplate = messagingTemplate;
+        this.presenceRegistry = presenceRegistry;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -128,6 +135,11 @@ public class ConversationService {
         String recipient = counterpart(conversation, senderSub);
         messagingTemplate.convertAndSendToUser(recipient, USER_QUEUE_MESSAGES, response);
         messagingTemplate.convertAndSendToUser(senderSub, USER_QUEUE_MESSAGES, response);
+
+        // Le destinataire en ligne reçoit déjà le message live ; hors-ligne, on dépose une notification.
+        if (!presenceRegistry.isOnline(recipient)) {
+            notificationService.notifyNewMessage(recipient, conversation, preview(request.content()));
+        }
         return response;
     }
 
