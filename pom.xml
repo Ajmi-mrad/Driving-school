@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>driving-school-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Driving School</name>
+    <description>Aggregator (reactor) module for the Driving School microservices</description>
+
+    <!--
+      This is an aggregator POM only: it lists the service modules so IntelliJ
+      imports them all in one reload. Each service keeps its own
+      spring-boot-starter-parent; this POM does not act as their parent.
+    -->
+    <modules>
+        <module>discovery-service</module>
+        <module>api-gateway</module>
+        <module>auth-service</module>
+        <module>booking-service</module>
+        <module>communication-service</module>
+        <module>vehicle-service</module>
+        <module>finance-service</module>
+    </modules>
+
+</project>
