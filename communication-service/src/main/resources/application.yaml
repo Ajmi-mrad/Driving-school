@@ -28,6 +28,17 @@ spring:
 # Origine autorisée pour le handshake WebSocket (front Angular ; dev : localhost:4200).
 communication:
   frontend-origin: ${FRONTEND_ORIGIN:http://localhost:4200}
+  # URL Keycloak telles que joignables DEPUIS LE NAVIGATEUR (Swagger UI) — pas le réseau Docker.
+  swagger:
+    auth-url: ${KEYCLOAK_AUTH_URL:http://localhost:8080/realms/auto-ecole/protocol/openid-connect/auth}
+    token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8080/realms/auto-ecole/protocol/openid-connect/token}
+
+# Swagger UI : pré-remplit le client public Keycloak et active PKCE pour le flux authorization_code.
+springdoc:
+  swagger-ui:
+    oauth:
+      client-id: ${SWAGGER_OAUTH_CLIENT_ID:auto-ecole-frontend}
+      use-pkce-with-authorization-code-grant: true
 
 eureka:
   client:

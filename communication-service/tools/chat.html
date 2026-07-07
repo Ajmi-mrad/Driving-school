@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Communication-service · chat test</title>
+<!--
+  Interactive monitor<->client chat test page.
+  MUST be served from http://localhost:4200 (the only origin the WebSocket handshake allows):
+      cd tools && python3 -m http.server 4200
+  Then open http://localhost:4200 in two tabs (monitor / client).
+-->
+<style>
+  body{font-family:system-ui,sans-serif;margin:0;background:#0f172a;color:#e2e8f0}
+  header{padding:10px 16px;background:#1e293b;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  header input{padding:6px 8px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0}
+  header button{padding:6px 12px;border-radius:6px;border:0;background:#2563eb;color:#fff;cursor:pointer}
+  header button:disabled{background:#475569;cursor:not-allowed}
+  #status{margin-left:auto;font-size:13px}
+  .on{color:#22c55e}.off{color:#f87171}
+  #log{padding:12px 16px;height:calc(100vh - 150px);overflow:auto}
+  .msg{padding:6px 10px;margin:4px 0;border-radius:8px;background:#1e293b;max-width:70%}
+  .mine{background:#1d4ed8;margin-left:auto}
+  .sys{background:transparent;color:#94a3b8;font-style:italic;font-size:13px}
+  footer{position:fixed;bottom:0;left:0;right:0;display:flex;gap:8px;padding:10px 16px;background:#1e293b}
+  footer input{flex:1;padding:8px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#e2e8f0}
+  footer button{padding:8px 16px;border-radius:6px;border:0;background:#16a34a;color:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <input id="user" placeholder="username" value="monitor" size="10">
+  <input id="pass" placeholder="password" type="password" value="Pass123!" size="10">
+  <input id="conv" placeholder="conversationId (UUID)" size="34">
+  <button id="connect">Connect</button>
+  <span id="status" class="off">disconnected</span>
+</header>
+<div id="log"></div>
+<footer>
+  <input id="text" placeholder="Type a message…" disabled>
+  <button id="send" disabled>Send</button>
+</footer>
+
+<script>
+const KC_TOKEN = 'http://localhost:8080/realms/auto-ecole/protocol/openid-connect/token';
+const API      = 'http://localhost:8084';
+const WS_URL   = 'ws://localhost:8084/ws/websocket';
+const $ = (id) => document.getElementById(id);
+let ws, mySub, token, conv;
+
+// Mark the open conversation's incoming messages as read (REST). The frontend owns "read" —
+// fetching/receiving a message doesn't mark it read; opening/viewing the conversation does.
+function markRead(){
+  if(!token || !conv) return;
+  fetch(`${API}/api/conversations/${conv}/read`, {method:'PATCH', headers:{Authorization:'Bearer '+token}})
+    .then(r => { if(r.status!==204) log('mark-read returned '+r.status,'sys'); })
+    .catch(e => log('mark-read failed: '+e.message,'sys'));
+}
+
+const log = (html, cls='') => {
+  const d = document.createElement('div'); d.className = 'msg '+cls; d.innerHTML = html;
+  $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight;
+};
+const setStatus = (txt, on) => { $('status').textContent = txt; $('status').className = on?'on':'off'; };
+
+const subOf = (jwt) => JSON.parse(atob(jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub;
+function frame(cmd, headers={}, body=''){ let f=cmd+'\n'; for(const k in headers) f+=k+':'+headers[k]+'\n'; return f+'\n'+body+'\0'; }
+function parse(raw){
+  const nul=raw.indexOf('\0'), text=nul>=0?raw.slice(0,nul):raw, sep=text.indexOf('\n\n');
+  const head=sep<0?text:text.slice(0,sep), body=sep<0?'':text.slice(sep+2);
+  const lines=head.split('\n'), command=lines.shift(), headers={};
+  for(const l of lines){const i=l.indexOf(':'); if(i>0) headers[l.slice(0,i)]=l.slice(i+1);}
+  return {command,headers,body};
+}
+
+async function connect(){
+  const username=$('user').value.trim(), password=$('pass').value;
+  conv=$('conv').value.trim();
+  if(!conv){ alert('Enter a conversationId (create one in Swagger: POST /api/conversations)'); return; }
+  $('connect').disabled=true; setStatus('logging in…', false);
+  try{
+    const r=await fetch(KC_TOKEN,{method:'POST',body:new URLSearchParams(
+      {grant_type:'password',client_id:'auto-ecole-frontend',username,password})});
+    if(!r.ok) throw new Error('token '+r.status); token=(await r.json()).access_token;
+  }catch(e){ setStatus('login failed: '+e.message,false); $('connect').disabled=false; return; }
+  mySub = subOf(token);
+  log('Logged in as <b>'+username+'</b> (sub '+mySub.slice(0,8)+'…)','sys');
+
+  ws=new WebSocket(WS_URL);
+  ws.onopen=()=>ws.send(frame('CONNECT',{'accept-version':'1.2','heart-beat':'0,0',Authorization:'Bearer '+token}));
+  ws.onclose=()=>{ setStatus('disconnected',false); $('text').disabled=$('send').disabled=true; $('connect').disabled=false; };
+  ws.onerror=()=>log('WebSocket error (page must be served from http://localhost:4200)','sys');
+  ws.onmessage=(e)=>{
+    const data=String(e.data); if(data==='\n')return;
+    console.log('WS<-', JSON.stringify(data)); // raw STOMP payload for debugging
+    for(const raw of data.split('\0')){ if(!raw.trim())continue;
+      let f; try { f=parse(raw); } catch(err){ console.error('parse failed', err, raw); continue; }
+      try {
+      if(f.command==='CONNECTED'){
+        setStatus('connected',true); $('text').disabled=$('send').disabled=false;
+        ws.send(frame('SUBSCRIBE',{id:'msg',destination:'/user/queue/messages'}));
+        ws.send(frame('SUBSCRIBE',{id:'pres',destination:'/topic/presence'}));
+        ws.send(frame('SUBSCRIBE',{id:'notif',destination:'/user/queue/notifications'}));
+        log('STOMP connected — subscribed to messages, presence & notifications','sys');
+        markRead(); // opening the conversation clears its unread messages
+      } else if(f.command==='MESSAGE'){
+        const dest=f.headers.destination||'';
+        if(dest.includes('/topic/presence')){ const p=JSON.parse(f.body);
+          log('presence: '+p.userId.slice(0,8)+'… is '+(p.online?'🟢 online':'⚪ offline'),'sys');
+        } else if(dest.includes('/queue/notifications')){ const n=JSON.parse(f.body);
+          log('🔔 ['+n.type+'] '+n.title+(n.body?' — '+n.body:'')+(n.amount!=null?' ('+n.amount+')':''),'sys');
+        } else { const m=JSON.parse(f.body); const mine=m.senderId===mySub;
+          log('<small>'+m.senderId.slice(0,8)+'…</small><br>'+m.content,(mine?'mine':''));
+          if(!mine) markRead(); // received a message while viewing -> mark read immediately
+        }
+      } else if(f.command==='ERROR'){ log('STOMP ERROR: '+(f.headers.message||'')+' '+f.body,'sys'); }
+      } catch(err){ console.error('frame handling failed', err, f); }
+    }
+  };
+}
+function send(){
+  const t=$('text').value.trim(); if(!t)return;
+  ws.send(frame('SEND',{destination:'/app/chat.send','content-type':'application/json'},
+    JSON.stringify({conversationId:$('conv').value.trim(),content:t})));
+  $('text').value='';
+}
+$('connect').onclick=connect;
+$('send').onclick=send;
+$('text').addEventListener('keydown',(e)=>{ if(e.key==='Enter') send(); });
+</script>
+</body>
+</html>

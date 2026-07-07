@@ -24,10 +24,14 @@ spring:
               uri: lb://vehicle-service
               predicates:
                 - Path=/api/vehicles/**
+            - id: finance-service
+              uri: lb://finance-service
+              predicates:
+                - Path=/api/forfaits/**,/api/enrollments/**,/api/payments/**,/api/invoices/**
             - id: communication-service
               uri: lb://communication-service
               predicates:
-                - Path=/api/conversations/**
+                - Path=/api/conversations/**,/api/notifications/**
             # Route du handshake WebSocket/STOMP : la Gateway relaie l'« Upgrade » automatiquement
             # une fois le chemin routé vers le service (lb:// résolu via Eureka).
             - id: communication-service-ws

@@ -522,6 +522,22 @@
       "groups": []
     },
     {
+      "id": "9a1c7e34-5d82-4b6f-8e21-3c7f9a0b1d52",
+      "username": "service-account-finance-service",
+      "emailVerified": false,
+      "enabled": true,
+      "totp": false,
+      "serviceAccountClientId": "finance-service",
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-auto-ecole",
+        "SECRETARY"
+      ],
+      "notBefore": 0,
+      "groups": []
+    },
+    {
       "username": "owner",
       "enabled": true,
       "emailVerified": true,
@@ -772,6 +788,68 @@
       ]
     },
     {
+      "id": "d3f8a6c2-1b4e-4f9a-9c17-2a6e5b8d4f10",
+      "clientId": "finance-service",
+      "name": "",
+      "description": "Compte de service du finance-service (appels sortants client_credentials).",
+      "rootUrl": "",
+      "adminUrl": "",
+      "baseUrl": "",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "financeServiceSecretChangeMe",
+      "redirectUris": [
+        "/*"
+      ],
+      "webOrigins": [
+        "/*"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "false",
+        "logout.confirmation.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "backchannel.logout.session.required": "true",
+        "standard.token.exchange.enabled": "false",
+        "oauth2.jwt.authorization.grant.enabled": "false",
+        "frontchannel.logout.session.required": "true",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "display.on.consent.screen": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "dpop.bound.access.tokens": "false"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": true,
+      "nodeReRegistrationTimeout": -1,
+      "defaultClientScopes": [
+        "web-origins",
+        "service_account",
+        "acr",
+        "roles",
+        "profile",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "organization",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
       "id": "4b4d5883-c7d1-460d-86c2-6b6ab340be42",
       "clientId": "auto-ecole-frontend",
       "name": "",
@@ -784,10 +862,14 @@
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://localhost:4200/*"
+        "http://localhost:4200/*",
+        "http://localhost:8081/swagger-ui/oauth2-redirect.html",
+        "http://localhost:8084/swagger-ui/oauth2-redirect.html"
       ],
       "webOrigins": [
-        "http://localhost:4200"
+        "http://localhost:4200",
+        "http://localhost:8081",
+        "http://localhost:8084"
       ],
       "notBefore": 0,
       "bearerOnly": false,

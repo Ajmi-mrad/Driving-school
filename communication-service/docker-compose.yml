@@ -27,13 +27,17 @@ services:
       COMMUNICATION_DB_USER: ${COMMUNICATION_DB_USER:-communicationuser}
       COMMUNICATION_DB_PASSWORD: ${COMMUNICATION_DB_PASSWORD:-communicationpass}
       # Keycloak joignable via le réseau partagé de la stack auth-service
-      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
+      KEYCLOAK_JWKS_URI: ${KEYCLOAK_JWKS_URI:-http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs}
+      # Keycloak joignable depuis le navigateur (Swagger UI « Authorize »)
+      KEYCLOAK_AUTH_URL: ${KEYCLOAK_AUTH_URL:-http://localhost:8080/realms/auto-ecole/protocol/openid-connect/auth}
+      KEYCLOAK_TOKEN_URL: ${KEYCLOAK_TOKEN_URL:-http://localhost:8080/realms/auto-ecole/protocol/openid-connect/token}
+      SWAGGER_OAUTH_CLIENT_ID: ${SWAGGER_OAUTH_CLIENT_ID:-auto-ecole-frontend}
       SERVER_PORT: 8084
       # Origine autorisée pour le handshake WebSocket (front Angular)
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
       # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
       EUREKA_ENABLED: "true"
-      EUREKA_SERVER_URL: http://discovery-service:8761/eureka
+      EUREKA_SERVER_URL: ${EUREKA_SERVER_URL:-http://discovery-service:8761/eureka}
     ports:
       - "8084:8084"
     depends_on:
