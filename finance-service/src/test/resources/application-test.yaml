@@ -1,0 +1,9 @@
+# Profil "test" : surcharge UNIQUEMENT ce qui doit l'être (fusionné par-dessus application.yaml).
+# La datasource est fournie par Testcontainers (@ServiceConnection) ; le jwk-set-uri, le token-uri
+# OAuth2 et la registration client viennent de application.yaml (paresseux, aucun appel réseau au
+# chargement du contexte).
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false

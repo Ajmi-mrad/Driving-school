@@ -1,0 +1,61 @@
+services:
+  # PostgreSQL dédié au finance-service.
+  finance-postgres:
+    image: postgres:16-alpine
+    container_name: finance-postgres
+    environment:
+      POSTGRES_DB: ${FINANCE_DB_NAME:-financedb}
+      POSTGRES_USER: ${FINANCE_DB_USER:-financeuser}
+      POSTGRES_PASSWORD: ${FINANCE_DB_PASSWORD:-financepass}
+    ports:
+      - "5437:5432"   # exposé en 5437 (auth=5433, vehicle=5434, booking=5435, comm=5436)
+    volumes:
+      - finance-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${FINANCE_DB_USER:-financeuser} -d ${FINANCE_DB_NAME:-financedb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auto-ecole
+
+  finance-service:
+    build: .
+    container_name: finance-service
+    environment:
+      FINANCE_DB_URL: jdbc:postgresql://finance-postgres:5432/${FINANCE_DB_NAME:-financedb}
+      FINANCE_DB_USER: ${FINANCE_DB_USER:-financeuser}
+      FINANCE_DB_PASSWORD: ${FINANCE_DB_PASSWORD:-financepass}
+      # Keycloak joignable via le réseau partagé de la stack auth-service
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
+      KEYCLOAK_TOKEN_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/token
+      KEYCLOAK_FINANCE_CLIENT_ID: ${KEYCLOAK_FINANCE_CLIENT_ID:-finance-service}
+      KEYCLOAK_FINANCE_SERVICE_SECRET: ${KEYCLOAK_FINANCE_SERVICE_SECRET:-financeServiceSecretChangeMe}
+      SERVER_PORT: 8085
+      # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
+      EUREKA_ENABLED: "true"
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka
+    ports:
+      - "8085:8085"
+    depends_on:
+      finance-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - auto-ecole
+
+volumes:
+  finance-postgres-data:
+
+# Réseau partagé créé par la stack auth-service (contient Keycloak).
+# Prérequis : la stack auth-service doit tourner (docker compose up dans auth-service/).
+networks:
+  auto-ecole:
+    external: true
+    name: auth-service_auto-ecole
