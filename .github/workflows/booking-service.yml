@@ -1,0 +1,34 @@
+name: booking-service
+
+on:
+  pull_request:
+    paths:
+      - "booking-service/**"
+      - ".github/workflows/booking-service.yml"
+      - ".github/workflows/reusable-*.yml"
+  push:
+    branches: [main]
+    paths:
+      - "booking-service/**"
+      - ".github/workflows/booking-service.yml"
+      - ".github/workflows/reusable-*.yml"
+
+concurrency:
+  group: booking-service-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      service: booking-service
+
+  cd:
+    if: github.ref == 'refs/heads/main'
+    needs: ci
+    uses: ./.github/workflows/reusable-cd.yml
+    with:
+      service: booking-service
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
