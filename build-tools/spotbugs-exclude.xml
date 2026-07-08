@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Shared SpotBugs exclude filter. Suppresses low-signal patterns so the report
+  reflects real bugs. Referenced by each service pom via
+  <excludeFilterFile>../build-tools/spotbugs-exclude.xml</excludeFilterFile>.
+-->
+<FindBugsFilter>
+  <!-- Defensive-copy nags on DTOs/entities/records — noise for this codebase. -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+
+  <!-- Generated MapStruct mapper implementations. -->
+  <Match>
+    <Class name="~.*MapperImpl"/>
+  </Match>
+</FindBugsFilter>

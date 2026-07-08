@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Shared PMD ruleset: best-practices + error-prone, minus low-signal rules that
+  were pure noise on this codebase. Referenced by each service pom via
+  <ruleset>../build-tools/pmd-ruleset.xml</ruleset>.
+  Kept on purpose: NullAssignment, AvoidReassigningParameters (worth a glance).
+-->
+<ruleset name="driving-school"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+
+  <description>Trimmed high-signal ruleset for Driving School services.</description>
+
+  <rule ref="category/java/bestpractices.xml">
+    <exclude name="GuardLogStatement"/>
+    <exclude name="AbstractClassWithoutAbstractMethod"/>
+  </rule>
+
+  <rule ref="category/java/errorprone.xml">
+    <exclude name="AvoidDuplicateLiterals"/>
+    <exclude name="MissingSerialVersionUID"/>
+  </rule>
+
+</ruleset>

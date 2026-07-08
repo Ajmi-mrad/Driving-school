@@ -74,8 +74,7 @@
 					<format>net.sourceforge.pmd.renderers.SarifRenderer</format>
 					<targetJdk>17</targetJdk>
 					<rulesets>
-						<ruleset>category/java/bestpractices.xml</ruleset>
-						<ruleset>category/java/errorprone.xml</ruleset>
+						<ruleset>../build-tools/pmd-ruleset.xml</ruleset>
 					</rulesets>
 				</configuration>
 			</plugin>
@@ -86,6 +85,7 @@
 				<configuration>
 					<failOnError>false</failOnError>
 					<sarifOutput>true</sarifOutput>
+					<excludeFilterFile>../build-tools/spotbugs-exclude.xml</excludeFilterFile>
 				</configuration>
 			</plugin>
 		</plugins>
