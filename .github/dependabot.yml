@@ -15,6 +15,14 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    # Bundle all minor/patch bumps per module into ONE PR (majors stay separate).
+    groups:
+      maven-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
 
   # GitHub Actions used in the workflows.
   - package-ecosystem: github-actions
@@ -24,3 +32,7 @@ updates:
     labels:
       - dependencies
       - ci
+    groups:
+      github-actions:
+        patterns:
+          - "*"
