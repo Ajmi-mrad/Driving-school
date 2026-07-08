@@ -19,6 +19,9 @@ concurrency:
 
 jobs:
   ci:
+    permissions:
+      contents: read
+      security-events: write
     uses: ./.github/workflows/reusable-ci.yml
     with:
       service: api-gateway

@@ -13,6 +13,9 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # required to upload SARIF to code scanning
     defaults:
       run:
         working-directory: ${{ inputs.service }}
@@ -31,3 +34,26 @@ jobs:
       # ubuntu-latest runners provide out of the box.
       - name: Build & test
         run: ./mvnw -B verify
+
+      # Static analysis is report-only: it never fails the build. PMD + SpotBugs
+      # emit SARIF, which is uploaded to GitHub code scanning (Security tab / PR
+      # annotations). Reuses the classes compiled by `verify`.
+      - name: Static analysis (PMD + SpotBugs → SARIF)
+        continue-on-error: true
+        run: ./mvnw -B pmd:pmd spotbugs:spotbugs
+
+      - name: Upload PMD SARIF
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ inputs.service }}/target/pmd.sarif.json
+          category: pmd-${{ inputs.service }}
+
+      - name: Upload SpotBugs SARIF
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ inputs.service }}/target/spotbugsSarif.json
+          category: spotbugs-${{ inputs.service }}

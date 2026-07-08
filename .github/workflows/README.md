@@ -12,7 +12,7 @@ Each per-service workflow calls two shared reusable workflows:
 
 | Workflow          | Runs on                     | What it does                                              |
 | ----------------- | --------------------------- | -------------------------------------------------------- |
-| `reusable-ci.yml` | every PR **and** push       | JDK 17 + `./mvnw -B verify` (unit + Testcontainers tests) |
+| `reusable-ci.yml` | every PR **and** push       | JDK 17 + `./mvnw -B verify` (unit + Testcontainers tests), then PMD + SpotBugs (report-only) |
 | `reusable-cd.yml` | push to `main` only         | Build Docker image and push it to Docker Hub             |
 
 So:
@@ -22,6 +22,36 @@ So:
 
 Services build independently and in parallel — a change touching two services triggers exactly
 those two pipelines.
+
+## Static analysis (PMD + SpotBugs)
+
+Each service's `pom.xml` declares the `maven-pmd-plugin` and `spotbugs-maven-plugin`, both configured
+to emit **SARIF**. CI runs them after the build (`pmd:pmd spotbugs:spotbugs`) and uploads the results
+to **GitHub code scanning**, so findings appear in the repo's **Security → Code scanning** tab and as
+annotations on pull requests. Each upload uses a distinct category (`pmd-<service>`, `spotbugs-<service>`).
+
+They are **report-only** — `failOnViolation` / `failOnError` are `false`, so findings never fail the
+build; the upload step is `continue-on-error` too.
+
+> Code scanning is free on **public** repositories. On a private repo it needs GitHub Advanced Security.
+
+Run locally the same way (produces `target/pmd.sarif.json` and `target/spotbugsSarif.json`):
+
+```bash
+cd auth-service && ./mvnw -B pmd:pmd spotbugs:spotbugs
+```
+
+To turn either into a blocking gate later, switch its `<configuration>` flag to `true` (or run the
+`:check` goal in CI).
+
+## Dependency updates (Dependabot)
+
+`.github/dependabot.yml` opens weekly PRs for:
+- **Maven** dependencies in each of the 7 service modules, and
+- the **GitHub Actions** used in these workflows.
+
+PRs are labelled `dependencies`. Each Maven PR touches one service, so its path-filtered CI runs and
+validates the bump automatically.
 
 ## Images
 

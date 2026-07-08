@@ -13,12 +13,17 @@ on:
       - ".github/workflows/vehicle-service.yml"
       - ".github/workflows/reusable-*.yml"
 
+## For this specific service and this specific Git reference (branch/PR/tag),
+## allow only one workflow execution at a time; if a newer one starts, cancel the older one
 concurrency:
   group: vehicle-service-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   ci:
+    permissions:
+      contents: read
+      security-events: write
     uses: ./.github/workflows/reusable-ci.yml
     with:
       service: vehicle-service
