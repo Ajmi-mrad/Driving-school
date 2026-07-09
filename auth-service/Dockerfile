@@ -12,7 +12,8 @@ RUN mvn -B -q -DskipTests clean package
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 # curl pour le healthcheck docker-compose
-RUN apk add --no-cache curl \
+RUN apk --no-cache upgrade \
+    && apk add --no-cache curl \
     && addgroup -S app && adduser -S -G app app
 COPY --from=build /app/target/*.jar app.jar
 USER app
