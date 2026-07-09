@@ -31,6 +31,9 @@ jobs:
   cd:
     if: github.ref == 'refs/heads/main'
     needs: ci
+    permissions:
+      contents: read
+      security-events: write
     uses: ./.github/workflows/reusable-cd.yml
     with:
       service: vehicle-service

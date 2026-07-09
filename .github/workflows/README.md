@@ -13,7 +13,7 @@ Each per-service workflow calls two shared reusable workflows:
 | Workflow          | Runs on                     | What it does                                              |
 | ----------------- | --------------------------- | -------------------------------------------------------- |
 | `reusable-ci.yml` | every PR **and** push       | JDK 17 + `./mvnw -B verify` (unit + Testcontainers tests), then PMD + SpotBugs (report-only) |
-| `reusable-cd.yml` | push to `main` only         | Build Docker image and push it to Docker Hub             |
+| `reusable-cd.yml` | push to `main` only         | Build + push Docker image, then Trivy image scan (report-only) |
 
 So:
 
@@ -22,6 +22,17 @@ So:
 
 Services build independently and in parallel — a change touching two services triggers exactly
 those two pipelines.
+
+## Container image scanning (Trivy)
+
+After CD builds and pushes an image, `reusable-cd.yml` runs **Trivy** against that exact image
+(by digest) to scan the **base-OS packages and bundled jars** — the runtime layer Dependabot does
+*not* see. It's **report-only** (`exit-code: 0`, `continue-on-error`) and uploads SARIF to code
+scanning under category `trivy-<service>`. Configured with `severity: HIGH,CRITICAL` and
+`ignore-unfixed: true` to keep the signal high. Runs on `main` only (that's where images are built).
+
+This is complementary to Dependabot: Dependabot watches your declared Maven deps; Trivy catches CVEs
+in the container's OS layer and anything actually shipped in the image.
 
 ## Static analysis (PMD + SpotBugs)
 
