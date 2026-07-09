@@ -59,7 +59,7 @@ jobs:
       # Dependabot doesn't see. Report-only: exit-code 0, never fails the build.
       - name: Scan image with Trivy
         continue-on-error: true
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/driving-school-${{ inputs.service }}@${{ steps.build.outputs.digest }}
           format: sarif
