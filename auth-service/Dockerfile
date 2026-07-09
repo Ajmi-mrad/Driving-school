@@ -9,13 +9,11 @@ COPY src src
 RUN mvn -B -q -DskipTests clean package
 
 # ---- Stage 2 : runtime (image JRE légère) ----
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 # curl pour le healthcheck docker-compose
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r app && useradd -r -g app app
+RUN apk add --no-cache curl \
+    && addgroup -S app && adduser -S -G app app
 COPY --from=build /app/target/*.jar app.jar
 USER app
 EXPOSE 8081
