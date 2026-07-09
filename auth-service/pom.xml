@@ -132,6 +132,18 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- Security fixes for transitive deps (Trivy findings):
+                 bcprov 1.80 -> CVE-2025-14813 (CRITICAL); commons-io 2.11.0 -> CVE-2024-47554 (HIGH). -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.84</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.18.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
