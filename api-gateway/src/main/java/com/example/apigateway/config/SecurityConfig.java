@@ -24,7 +24,7 @@ public class SecurityConfig {
                         // Préflight CORS : jamais authentifié.
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Sondes et documentation : publiques.
-                        .pathMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                        .pathMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                         .pathMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(org.springframework.security.config.Customizer.withDefaults()));

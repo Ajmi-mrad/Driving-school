@@ -38,6 +38,8 @@ services:
       # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
       EUREKA_ENABLED: "true"
       EUREKA_SERVER_URL: ${EUREKA_SERVER_URL:-http://discovery-service:8761/eureka}
+      # Traces -> OpenTelemetry Collector (observability stack, same network).
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     ports:
       - "8084:8084"
     depends_on:
