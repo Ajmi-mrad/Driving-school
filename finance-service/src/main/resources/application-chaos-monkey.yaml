@@ -1,0 +1,28 @@
+# Chaos Monkey for Spring Boot — interactive resilience experiments. ONLY active when this
+# profile is on: run with `--spring.profiles.active=chaos-monkey`. All assaults start DISABLED;
+# toggle them at runtime via the actuator endpoint (see docs/chaos-testing.md), then watch the
+# effect in the Grafana / Jaeger observability stack.
+chaos:
+  monkey:
+    enabled: true
+    watcher:
+      rest-controller: true    # assault inbound controller calls
+      service: true            # assault @Service beans (e.g. PaymentService, EnrollmentService)
+      rest-template: false
+      component: false
+    assaults:
+      level: 3                 # attack every Nth call
+      latency-active: false
+      latency-range-start: 1000
+      latency-range-end: 4000
+      exceptions-active: false
+      kill-application-active: false
+
+management:
+  endpoint:
+    chaosmonkey:
+      access: unrestricted     # expose the chaos-monkey control endpoint
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,chaosmonkey
