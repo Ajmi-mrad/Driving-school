@@ -23,6 +23,13 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # Spring Cloud 2025.1.x targets Spring Boot 3.6 / Framework 7 and pulls in
+      # classes (e.g. RestClientHttpServiceGroupConfigurer) absent from our Boot 3.5
+      # line, breaking every service's contextLoads test. Stay on the 2025.0 train
+      # until spring-boot-starter-parent is bumped to a compatible major.
+      - dependency-name: "org.springframework.cloud:spring-cloud-dependencies"
+        versions: [">=2025.1.0"]
 
   # GitHub Actions used in the workflows.
   - package-ecosystem: github-actions
