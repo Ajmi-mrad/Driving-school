@@ -65,7 +65,7 @@ services:
     image: otel/opentelemetry-collector-contrib:0.109.0
     container_name: otel-collector
     # root so the filelog receiver can read /var/lib/docker/containers/*.log
-    user: root
+    user: "0:0"
     command: ["--config=/etc/otel/config.yaml"]
     volumes:
       - ./otel-collector/config.yaml:/etc/otel/config.yaml:ro

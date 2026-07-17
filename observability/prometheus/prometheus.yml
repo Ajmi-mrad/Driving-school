@@ -25,8 +25,7 @@ scrape_configs:
           - vehicle-service:8082
           - communication-service:8084
           - finance-service:8085
-          # booking-service has no docker-compose service yet; add `booking-service:8083`
-          # here once it runs, otherwise it stays permanently DOWN and fires ServiceDown.
+          - booking-service:8083
 
   # OpenTelemetry Collector's own telemetry.
   - job_name: otel-collector
