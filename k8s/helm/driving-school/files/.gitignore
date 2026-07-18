@@ -1,0 +1,2 @@
+# The realm JSON is synced from auth-service/ by `make sync-realm`; don't commit the copy.
+realm-export.json
