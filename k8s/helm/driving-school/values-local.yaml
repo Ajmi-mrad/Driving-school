@@ -1,0 +1,32 @@
+# ============================================================================
+# minikube overlay. Deploy with:
+#   helm upgrade --install driving-school ./k8s/helm/driving-school \
+#     -n driving-school --create-namespace -f values-local.yaml
+#
+# Deep-merged on top of values.yaml. Only overrides the things that must point
+# at the browser-reachable ingress host (Keycloak login / Swagger token flow).
+# ============================================================================
+
+keycloak:
+  externalUrl: http://keycloak.driving-school.local
+
+ingress:
+  enabled: true
+  className: nginx
+  apiHost: api.driving-school.local
+  keycloakHost: keycloak.driving-school.local
+  eurekaEnabled: true
+  eurekaHost: eureka.driving-school.local
+
+# Browser-facing Keycloak endpoints must resolve from your host machine, so they
+# use the ingress host (add it to /etc/hosts -> `minikube ip`). Backend JWT
+# validation still uses the internal http://keycloak:8080 JWKS (see values.yaml).
+services:
+  auth-service:
+    env:
+      KEYCLOAK_AUTH_URL: http://keycloak.driving-school.local/realms/auto-ecole/protocol/openid-connect/auth
+      KEYCLOAK_TOKEN_URL: http://keycloak.driving-school.local/realms/auto-ecole/protocol/openid-connect/token
+  communication-service:
+    env:
+      KEYCLOAK_AUTH_URL: http://keycloak.driving-school.local/realms/auto-ecole/protocol/openid-connect/auth
+      KEYCLOAK_TOKEN_URL: http://keycloak.driving-school.local/realms/auto-ecole/protocol/openid-connect/token

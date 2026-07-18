@@ -1,0 +1,47 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: driving-school
+  labels:
+    {{- include "ds.labels" . | nindent 4 }}
+  annotations:
+    # Allow WebSocket/STOMP upgrades (/ws) and long-lived connections.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.apiHost }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8222
+    - host: {{ .Values.ingress.keycloakHost }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
+    {{- if .Values.ingress.eurekaEnabled }}
+    - host: {{ .Values.ingress.eurekaHost }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: discovery-service
+                port:
+                  number: 8761
+    {{- end }}
+{{- end }}

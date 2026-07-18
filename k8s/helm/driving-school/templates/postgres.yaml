@@ -1,0 +1,101 @@
+# Shared PostgreSQL: one StatefulSet hosting all app databases + the Keycloak DB.
+# Databases/users are created once (empty data dir) by the init script below.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  labels:
+    {{- include "ds.labels" . | nindent 4 }}
+data:
+  init-db.sh: |
+    #!/bin/bash
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
+    {{- range .Values.databases }}
+      CREATE USER {{ .user }} WITH PASSWORD '${{"{"}}{{ .passwordKey }}}';
+      CREATE DATABASE {{ .name }} OWNER {{ .user }};
+    {{- end }}
+    EOSQL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    {{- include "ds.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "ds.selectorLabels" (dict "name" "postgres") | nindent 4 }}
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    {{- include "ds.labels" . | nindent 4 }}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ds.selectorLabels" (dict "name" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ds.labels" . | nindent 8 }}
+        {{- include "ds.selectorLabels" (dict "name" "postgres") | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.superUser | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ds.secretName" . }}
+                  key: POSTGRES_SUPER_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            {{- range .Values.databases }}
+            - name: {{ .passwordKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ds.secretName" $ }}
+                  key: {{ .passwordKey }}
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.superUser | quote }}]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.superUser | quote }}]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+      volumes:
+        - name: init
+          configMap:
+            name: postgres-init
+            defaultMode: 0755
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}
