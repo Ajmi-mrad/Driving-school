@@ -1,0 +1,13 @@
+# Integration/chaos test profile. Datasource comes from Testcontainers; downstream service URIs
+# (auth/communication) and the OAuth2 token-uri are pointed at WireMock/Toxiproxy at runtime via
+# @DynamicPropertySource. Eureka is disabled so the load balancer resolves service ids from the
+# static SimpleDiscoveryClient instances instead.
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+logging:
+  level:
+    org.springframework.cloud.loadbalancer: warn

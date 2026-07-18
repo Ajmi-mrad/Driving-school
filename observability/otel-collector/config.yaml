@@ -1,0 +1,66 @@
+# OpenTelemetry Collector — the central telemetry router.
+#   traces: apps push OTLP (4317/4318) -> Jaeger
+#   logs:   tail Docker container json logs -> Loki (native OTLP ingest)
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  filelog:
+    include:
+      - /var/lib/docker/containers/*/*-json.log
+    include_file_path: true
+    start_at: end
+    operators:
+      # Docker writes one JSON object per line: {"log": "...", "stream": "...", "time": "..."}
+      # `time` is RFC3339Nano (up to 9 fractional digits) — parse with a Go layout so a
+      # variable-length nanosecond fraction is handled (strptime %L only covers milliseconds).
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout_type: gotime
+          layout: "2006-01-02T15:04:05.999999999Z07:00"
+      # Capture the container id from the log file path for a Loki label.
+      - type: regex_parser
+        parse_from: attributes["log.file.path"]
+        regex: '^/var/lib/docker/containers/(?P<container_id>[^/]+)/'
+      # The actual log line becomes the record body.
+      - type: move
+        from: attributes.log
+        to: body
+      - type: move
+        from: attributes.container_id
+        to: resource["container.id"]
+
+processors:
+  batch: {}
+  resource/loki:
+    attributes:
+      - key: service.namespace
+        value: driving-school
+        action: upsert
+
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+
+service:
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger]
+    logs:
+      receivers: [filelog]
+      processors: [resource/loki, batch]
+      exporters: [otlphttp/loki]

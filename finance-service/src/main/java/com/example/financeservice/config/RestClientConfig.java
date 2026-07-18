@@ -1,5 +1,9 @@
 package com.example.financeservice.config;
 
+import java.time.Duration;
+
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,7 +25,13 @@ public class RestClientConfig {
     @Bean
     @LoadBalanced
     RestClient.Builder loadBalancedRestClientBuilder() {
-        return RestClient.builder();
+        // Bounded connect/read timeouts so a stalled downstream fails fast instead of
+        // hanging the request thread indefinitely (best-effort calls stay best-effort).
+        ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.defaults()
+                .withConnectTimeout(Duration.ofSeconds(2))
+                .withReadTimeout(Duration.ofSeconds(3));
+        return RestClient.builder()
+                .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings));
     }
 
     @Bean

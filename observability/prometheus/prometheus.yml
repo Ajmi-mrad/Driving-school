@@ -1,0 +1,46 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - alert-rules.yml
+
+scrape_configs:
+  # Spring Boot services (Micrometer/Prometheus registry). The `application`
+  # label is added by each app via management.metrics.tags.application.
+  # Docker mode targets = container names on the auth-service_auto-ecole network.
+  # IDE mode: replace with host.docker.internal:<port> (see README).
+  - job_name: spring-actuator
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - discovery-service:8761
+          - api-gateway:8222
+          - auth-service:8081
+          - vehicle-service:8082
+          - communication-service:8084
+          - finance-service:8085
+          - booking-service:8083
+
+  # OpenTelemetry Collector's own telemetry.
+  - job_name: otel-collector
+    static_configs:
+      - targets: [otel-collector:8888]
+
+  # Infrastructure metrics.
+  - job_name: cadvisor
+    static_configs:
+      - targets: [cadvisor:8080]
+
+  - job_name: node-exporter
+    static_configs:
+      - targets: [node-exporter:9100]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
