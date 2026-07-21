@@ -54,6 +54,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Never cache the `runtime` stage so `apk upgrade` re-runs every build
+          # and pulls current OS security patches. The Maven build stage still
+          # caches (the slow part). Without this, a cached OS layer keeps stale,
+          # vulnerable packages (e.g. libcurl) even after upstream fixes ship.
+          no-cache-filters: runtime
 
       # Scan the pushed image (base-OS packages + bundled jars) — a layer
       # Dependabot doesn't see. Report-only: exit-code 0, never fails the build.
