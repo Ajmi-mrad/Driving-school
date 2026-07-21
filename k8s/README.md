@@ -77,8 +77,9 @@ helm/driving-school/
 cluster from a `KUBECONFIG` secret. It's inactive until you add the `KUBECONFIG` repo secret and have a
 real cluster. For managed Postgres, override the `*_DB_URL` env + secrets to point at the external DB.
 
-## Known gap
+## Service-to-service auth
 
-`booking-service` has no client in `realm-export.json` yet, so its service-to-service (client-credentials)
-calls will fail until a `booking-service` confidential client + service account is added to the realm.
-Pre-existing, unrelated to Kubernetes.
+`auth-service`, `finance-service`, and `booking-service` each have a confidential client (with a service
+account) in `realm-export.json` for their outbound `client_credentials` calls. Their secrets are wired
+through the chart `Secret` (`AUTH_SERVICE_CLIENT_SECRET`, `FINANCE_SERVICE_CLIENT_SECRET`,
+`BOOKING_SERVICE_CLIENT_SECRET`) and must stay in sync with the `"secret"` values in the realm export.

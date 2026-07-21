@@ -51,10 +51,10 @@ secrets:
   FINANCE_DB_PASSWORD: financepass
   KC_DB_PASSWORD: keycloak
   KEYCLOAK_ADMIN_PASSWORD: admin
-  # Keycloak client secrets (client_credentials). auth/finance match realm-export.json.
+  # Keycloak client secrets (client_credentials). auth/finance/booking match realm-export.json.
   AUTH_SERVICE_CLIENT_SECRET: KAy4oDfhP3EwmMGluIeVmFC8NgS7bE1I
   FINANCE_SERVICE_CLIENT_SECRET: financeServiceSecretChangeMe
-  BOOKING_SERVICE_CLIENT_SECRET: changeme # CHANGEME: booking-service realm client not yet defined
+  BOOKING_SERVICE_CLIENT_SECRET: bookingServiceSecretChangeMe
 
 # Databases created inside the shared Postgres by its init script.
 # passwordKey references a key in the Secret above.
