@@ -1,0 +1,110 @@
+# Keycloak identity provider with auto-import of the auto-ecole realm.
+# The realm JSON is synced into files/ by `make sync-realm` before deploy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  labels:
+    {{- include "ds.labels" . | nindent 4 }}
+data:
+  realm-export.json: |-
+{{ .Files.Get "files/realm-export.json" | indent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels:
+    {{- include "ds.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "ds.selectorLabels" (dict "name" "keycloak") | nindent 4 }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    {{- include "ds.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ds.selectorLabels" (dict "name" "keycloak") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ds.labels" . | nindent 8 }}
+        {{- include "ds.selectorLabels" (dict "name" "keycloak") | nindent 8 }}
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 3; done"]
+      containers:
+        - name: keycloak
+          image: {{ .Values.keycloak.image }}
+          args: ["start-dev", "--import-realm"]
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://postgres:5432/keycloak
+            - name: KC_DB_USERNAME
+              value: keycloak
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ds.secretName" . }}
+                  key: KC_DB_PASSWORD
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: {{ .Values.keycloak.adminUser | quote }}
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ds.secretName" . }}
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            # Behind ingress-nginx (HTTP): trust X-Forwarded headers, fixed frontend hostname.
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_HOSTNAME
+              value: {{ .Values.keycloak.externalUrl | quote }}
+            - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+              value: "true"
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: 9000
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 9000
+            periodSeconds: 20
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+      volumes:
+        - name: realm
+          configMap:
+            name: keycloak-realm
