@@ -96,7 +96,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-pmd-plugin</artifactId>
-				<version>3.26.0</version>
+				<version>3.28.0</version>
 				<configuration>
 					<failOnViolation>false</failOnViolation>
 					<format>net.sourceforge.pmd.renderers.SarifRenderer</format>
@@ -109,7 +109,7 @@
 			<plugin>
 				<groupId>com.github.spotbugs</groupId>
 				<artifactId>spotbugs-maven-plugin</artifactId>
-				<version>4.8.6.6</version>
+				<version>4.10.3.0</version>
 				<configuration>
 					<failOnError>false</failOnError>
 					<sarifOutput>true</sarifOutput>
