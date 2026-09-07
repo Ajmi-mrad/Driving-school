@@ -19,6 +19,7 @@ import { SessionDetailDialog } from '@/components/sessions/SessionDetailDialog'
 import { useAuth } from '@/core/auth/AuthContext'
 import { isStaff, permissions } from '@/core/auth/roles'
 import { useAsync } from '@/core/hooks/useAsync'
+import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { sessionsApi, usersApi, vehiclesApi } from '@/core/api'
 import {
   SESSION_STATUSES,
@@ -49,10 +50,11 @@ export function SessionsPage() {
     return { clientId: user?.id }
   }, [staff, roles, user?.id])
 
-  const { data, loading, reload } = useAsync(
+  const { data, loading, reload, refresh } = useAsync(
     () => sessionsApi.list(filter),
     [filter.monitorId, filter.clientId, staff],
   )
+  useRevalidateOnFocus(refresh)
   const { data: users } = useAsync(() => usersApi.list(), [])
   const { data: vehicles } = useAsync(() => vehiclesApi.list(), [])
 

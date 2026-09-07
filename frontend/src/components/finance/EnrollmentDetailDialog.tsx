@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { paymentsApi } from '@/core/api'
+import { ApiError } from '@/core/api/client'
 import type { Enrollment } from '@/core/types'
 import { formatCurrency, formatDate } from '@/core/format'
 import { ENROLLMENT_STATUS_TONE } from '@/lib/tones'
@@ -31,8 +32,12 @@ export function EnrollmentDetailDialog({
   if (!enrollment) return null
 
   const remind = async () => {
-    await paymentsApi.remind(enrollment.id)
-    toast.success(t('payments.remindSent'))
+    try {
+      await paymentsApi.remind(enrollment.id)
+      toast.success(t('payments.remindSent'))
+    } catch (err) {
+      toast.error(err instanceof ApiError ? t('payments.remindFailed') : t('common.error'))
+    }
   }
 
   const paidPct =

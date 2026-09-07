@@ -20,19 +20,24 @@ import {
 } from '@/components/ui/select'
 import { useAsync } from '@/core/hooks/useAsync'
 import { enrollmentsApi, paymentsApi, usersApi, type PaymentInput } from '@/core/api'
-import { PAYMENT_METHODS, type PaymentMethod } from '@/core/types'
+import { ApiError } from '@/core/api/client'
+import { PAYMENT_METHODS, type Payment, type PaymentMethod } from '@/core/types'
 import { fullName, formatCurrency } from '@/core/format'
 
 export function PaymentFormDialog({
   open,
   onOpenChange,
   onSaved,
+  payment,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: () => void
+  /** When set, the dialog edits this payment instead of creating a new one. */
+  payment?: Payment | null
 }) {
   const { t } = useTranslation()
+  const editing = !!payment
   const [enrollmentId, setEnrollmentId] = useState('')
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<PaymentMethod>('CARD')
@@ -54,13 +59,19 @@ export function PaymentFormDialog({
   }, [clients])
 
   useEffect(() => {
-    if (open) {
+    if (!open) return
+    if (payment) {
+      setEnrollmentId(payment.enrollmentId)
+      setAmount(String(payment.amount))
+      setMethod(payment.method)
+      setReference(payment.reference ?? '')
+    } else {
       setEnrollmentId('')
       setAmount('')
       setMethod('CARD')
       setReference('')
     }
-  }, [open])
+  }, [open, payment])
 
   const onPickEnrollment = (id: string) => {
     setEnrollmentId(id)
@@ -78,10 +89,21 @@ export function PaymentFormDialog({
       reference: reference.trim() || null,
     }
     try {
-      await paymentsApi.create(payload)
-      toast.success(t('payments.createdToast'))
+      if (payment) {
+        await paymentsApi.update(payment.id, {
+          amount: payload.amount,
+          method: payload.method,
+          reference: payload.reference,
+        })
+        toast.success(t('payments.updatedToast'))
+      } else {
+        await paymentsApi.create(payload)
+        toast.success(t('payments.createdToast'))
+      }
       onSaved()
       onOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t('common.error'))
     } finally {
       setSaving(false)
     }
@@ -91,13 +113,13 @@ export function PaymentFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('payments.newTitle')}</DialogTitle>
+          <DialogTitle>{editing ? t('payments.editTitle') : t('payments.newTitle')}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="space-y-1.5">
             <Label>{t('payments.enrollment')}</Label>
-            <Select value={enrollmentId} onValueChange={onPickEnrollment}>
+            <Select value={enrollmentId} onValueChange={onPickEnrollment} disabled={editing}>
               <SelectTrigger>
                 <SelectValue placeholder={t('payments.selectEnrollment')} />
               </SelectTrigger>

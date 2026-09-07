@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { useAuth } from '@/core/auth/AuthContext'
 import { isStaff } from '@/core/auth/roles'
@@ -40,6 +41,7 @@ export function SessionDetailDialog({
   const [date, setDate] = useState('')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
+  const [comment, setComment] = useState('')
 
   const open = !!session
   if (!session) return null
@@ -111,6 +113,9 @@ export function SessionDetailDialog({
             value={`${formatTime(session.startTime)} – ${formatTime(session.endTime)}`}
           />
           {session.notes && <Row label={t('sessions.notes')} value={session.notes} />}
+          {session.decisionNote && (
+            <Row label={t('sessions.decisionNote')} value={session.decisionNote} />
+          )}
         </dl>
 
         {rescheduling ? (
@@ -142,11 +147,23 @@ export function SessionDetailDialog({
           <div className="flex flex-wrap justify-end gap-2">
             {canModerate && isPending && (
               <>
+                <div className="w-full space-y-1.5">
+                  <Label>{t('sessions.decisionNoteLabel')}</Label>
+                  <Textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder={t('sessions.decisionNotePlaceholder')}
+                    rows={2}
+                  />
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    act(() => sessionsApi.refuse(session.id), t('sessions.refusedToast'))
+                    act(
+                      () => sessionsApi.refuse(session.id, comment.trim() || undefined),
+                      t('sessions.refusedToast'),
+                    )
                   }
                 >
                   {t('sessions.refuse')}
@@ -154,7 +171,10 @@ export function SessionDetailDialog({
                 <Button
                   size="sm"
                   onClick={() =>
-                    act(() => sessionsApi.confirm(session.id), t('sessions.confirmedToast'))
+                    act(
+                      () => sessionsApi.confirm(session.id, comment.trim() || undefined),
+                      t('sessions.confirmedToast'),
+                    )
                   }
                 >
                   {t('sessions.confirm')}

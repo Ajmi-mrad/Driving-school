@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Car, GraduationCap, Pencil, Plus } from 'lucide-react'
+import { toast } from 'sonner'
+import { Car, GraduationCap, Pencil, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,7 +12,9 @@ import { ForfaitFormDialog } from '@/components/finance/ForfaitFormDialog'
 import { useAuth } from '@/core/auth/AuthContext'
 import { isStaff } from '@/core/auth/roles'
 import { useAsync } from '@/core/hooks/useAsync'
+import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { forfaitsApi } from '@/core/api'
+import { ApiError } from '@/core/api/client'
 import type { Forfait } from '@/core/types'
 import { formatCurrency } from '@/core/format'
 
@@ -20,8 +24,20 @@ export function ForfaitsPage() {
   const canWrite = isStaff(roles)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Forfait | null>(null)
+  const [toDelete, setToDelete] = useState<Forfait | null>(null)
 
-  const { data, loading, reload } = useAsync(() => forfaitsApi.list(!canWrite), [canWrite])
+  const { data, loading, reload, refresh } = useAsync(() => forfaitsApi.list(!canWrite), [canWrite])
+  useRevalidateOnFocus(refresh)
+
+  const remove = async (f: Forfait) => {
+    try {
+      await forfaitsApi.remove(f.id)
+      toast.success(t('forfaits.deletedToast'))
+      reload()
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : t('common.error'))
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -63,16 +79,26 @@ export function ForfaitsPage() {
                   )}
                 </div>
                 {canWrite && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setEditing(f)
-                      setFormOpen(true)
-                    }}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditing(f)
+                        setFormOpen(true)
+                      }}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive"
+                      onClick={() => setToDelete(f)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 )}
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-4">
@@ -105,6 +131,16 @@ export function ForfaitsPage() {
         onOpenChange={setFormOpen}
         forfait={editing}
         onSaved={reload}
+      />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        title={t('forfaits.deleteTitle')}
+        description={t('forfaits.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        destructive
+        onConfirm={() => toDelete && remove(toDelete)}
       />
     </div>
   )

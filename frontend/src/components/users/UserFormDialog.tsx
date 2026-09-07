@@ -21,10 +21,12 @@ interface FormState {
   lastName: string
   username: string
   email: string
+  password: string
   phones: string
   roles: Role[]
   permitNumber: string
   notificationsEnabled: boolean
+  active: boolean
 }
 
 const EMPTY: FormState = {
@@ -32,10 +34,12 @@ const EMPTY: FormState = {
   lastName: '',
   username: '',
   email: '',
+  password: '',
   phones: '',
   roles: ['CLIENT'],
   permitNumber: '',
   notificationsEnabled: true,
+  active: true,
 }
 
 function fromUser(u: User): FormState {
@@ -44,10 +48,12 @@ function fromUser(u: User): FormState {
     lastName: u.lastName,
     username: u.username,
     email: u.email,
+    password: '',
     phones: u.phones.join(', '),
     roles: u.roles,
     permitNumber: u.permitNumber ?? '',
     notificationsEnabled: u.notificationsEnabled,
+    active: u.active,
   }
 }
 
@@ -86,7 +92,9 @@ export function UserFormDialog({
     form.lastName.trim() &&
     form.username.trim() &&
     form.email.trim() &&
-    form.roles.length > 0
+    form.roles.length > 0 &&
+    // Password is required (min 8 chars) only when creating a user.
+    (user ? true : form.password.length >= 8)
 
   const submit = async () => {
     if (!valid) return
@@ -106,10 +114,10 @@ export function UserFormDialog({
     }
     try {
       if (user) {
-        await usersApi.update(user.id, payload)
+        await usersApi.update(user.internalId ?? user.id, { ...payload, active: form.active })
         toast.success(t('users.updatedToast'))
       } else {
-        await usersApi.create(payload)
+        await usersApi.create({ ...payload, password: form.password })
         toast.success(t('users.createdToast'))
       }
       onSaved()
@@ -160,6 +168,16 @@ export function UserFormDialog({
             </Field>
           </div>
 
+          {!user && (
+            <Field label={t('users.password')} hint={t('users.passwordHint')}>
+              <Input
+                type="password"
+                value={form.password}
+                onChange={(e) => set('password', e.target.value)}
+              />
+            </Field>
+          )}
+
           <Field label={t('users.phones')} hint={t('users.phonesHint')}>
             <Input
               value={form.phones}
@@ -205,6 +223,22 @@ export function UserFormDialog({
               onCheckedChange={(v) => set('notificationsEnabled', v)}
             />
           </div>
+
+          {user && (
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label htmlFor="active">{t('users.activeAccount')}</Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('users.activeAccountHint')}
+                </p>
+              </div>
+              <Switch
+                id="active"
+                checked={form.active}
+                onCheckedChange={(v) => set('active', v)}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>

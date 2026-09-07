@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/common/PageHeader'
 import { DataTable, type Column } from '@/components/common/DataTable'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { EnrollmentFormDialog } from '@/components/finance/EnrollmentFormDialog'
+import { EnrollmentEditDialog } from '@/components/finance/EnrollmentEditDialog'
 import { EnrollmentDetailDialog } from '@/components/finance/EnrollmentDetailDialog'
 import { useAuth } from '@/core/auth/AuthContext'
 import { isStaff } from '@/core/auth/roles'
 import { useAsync } from '@/core/hooks/useAsync'
+import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { enrollmentsApi, forfaitsApi, usersApi } from '@/core/api'
 import type { Enrollment } from '@/core/types'
 import { fullName, formatCurrency } from '@/core/format'
@@ -21,11 +25,32 @@ export function EnrollmentsPage() {
   const staff = isStaff(roles)
   const [formOpen, setFormOpen] = useState(false)
   const [selected, setSelected] = useState<Enrollment | null>(null)
+  const [editing, setEditing] = useState<Enrollment | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Enrollment | 'bulk' | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-  const { data, loading, reload } = useAsync(
+  const { data, loading, reload, refresh } = useAsync(
     () => enrollmentsApi.list(staff ? undefined : user?.id),
     [staff, user?.id],
   )
+  useRevalidateOnFocus(refresh)
+
+  const performDelete = async () => {
+    const ids = deleteTarget === 'bulk' ? [...selectedIds] : deleteTarget ? [deleteTarget.id] : []
+    const results = await Promise.allSettled(ids.map((id) => enrollmentsApi.remove(id)))
+    const ok = results.filter((r) => r.status === 'fulfilled').length
+    const failed = ids.length - ok
+    if (failed === 0) {
+      toast.success(
+        ids.length === 1 ? t('enrollments.deletedToast') : t('enrollments.deletedManyToast', { count: ok }),
+      )
+    } else {
+      toast.error(t('enrollments.deletePartialToast', { ok, failed }))
+    }
+    if (deleteTarget === 'bulk') setSelectedIds(new Set())
+    setDeleteTarget(null)
+    reload()
+  }
   const { data: users } = useAsync(() => (staff ? usersApi.list('CLIENT') : Promise.resolve([])), [staff])
   const { data: forfaits } = useAsync(() => forfaitsApi.list(), [])
 
@@ -81,6 +106,44 @@ export function EnrollmentsPage() {
         </StatusBadge>
       ),
     },
+    ...(staff
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            className: 'w-24 text-end',
+            cell: (e: Enrollment) => (
+              <div className="flex justify-end gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title={t('common.edit')}
+                  aria-label={t('common.edit')}
+                  onClick={(ev) => {
+                    ev.stopPropagation()
+                    setEditing(e)
+                  }}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive"
+                  title={t('common.delete')}
+                  aria-label={t('common.delete')}
+                  onClick={(ev) => {
+                    ev.stopPropagation()
+                    setDeleteTarget(e)
+                  }}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -98,15 +161,41 @@ export function EnrollmentsPage() {
         }
       />
 
+      {staff && selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 p-3">
+          <span className="text-sm font-medium">
+            {t('enrollments.selected', { count: selectedIds.size })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ms-auto text-destructive"
+            onClick={() => setDeleteTarget('bulk')}
+          >
+            <Trash2 className="size-4" />
+            {t('common.delete')}
+          </Button>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
         rows={data ?? []}
         loading={loading}
         emptyLabel={t('enrollments.empty')}
         onRowClick={setSelected}
+        selectable={staff}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
       />
 
       <EnrollmentFormDialog open={formOpen} onOpenChange={setFormOpen} onSaved={reload} />
+
+      <EnrollmentEditDialog
+        enrollment={editing}
+        onOpenChange={(o) => !o && setEditing(null)}
+        onSaved={reload}
+      />
 
       <EnrollmentDetailDialog
         enrollment={selected}
@@ -114,6 +203,20 @@ export function EnrollmentsPage() {
         resolveName={nameOf}
         resolveForfait={forfaitOf}
         canRemind={staff}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={t('enrollments.deleteTitle')}
+        description={
+          deleteTarget === 'bulk'
+            ? t('enrollments.deleteManyConfirm', { count: selectedIds.size })
+            : t('enrollments.deleteConfirm')
+        }
+        confirmLabel={t('common.delete')}
+        destructive
+        onConfirm={performDelete}
       />
     </div>
   )

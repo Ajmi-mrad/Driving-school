@@ -26,6 +26,7 @@ import { MaintenanceDialog } from '@/components/vehicles/MaintenanceDialog'
 import { useAuth } from '@/core/auth/AuthContext'
 import { isStaff } from '@/core/auth/roles'
 import { useAsync } from '@/core/hooks/useAsync'
+import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { vehiclesApi } from '@/core/api'
 import {
   FUEL_TYPES,
@@ -49,7 +50,7 @@ export function VehiclesPage() {
   const [editing, setEditing] = useState<Vehicle | null>(null)
   const [maintenanceFor, setMaintenanceFor] = useState<Vehicle | null>(null)
 
-  const { data, loading, reload } = useAsync(
+  const { data, loading, reload, refresh } = useAsync(
     () =>
       vehiclesApi.list({
         status: status === 'ALL' ? undefined : status,
@@ -57,6 +58,7 @@ export function VehiclesPage() {
       }),
     [status, fuel],
   )
+  useRevalidateOnFocus(refresh)
 
   const changeStatus = async (v: Vehicle, next: VehicleStatus) => {
     await vehiclesApi.setStatus(v.id, next)

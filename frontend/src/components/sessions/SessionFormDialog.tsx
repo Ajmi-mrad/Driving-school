@@ -102,6 +102,8 @@ export function SessionFormDialog({
       toast.success(t('sessions.createdToast'))
       onSaved()
       onOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.error'))
     } finally {
       setSaving(false)
     }

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/core/auth/AuthContext'
 import { useAsync } from '@/core/hooks/useAsync'
+import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { notificationsApi } from '@/core/api'
 import type { Notification } from '@/core/types'
 import { formatRelativeShort } from '@/core/format'
@@ -19,10 +20,11 @@ export function NotificationsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
 
-  const { data, loading, reload } = useAsync(
+  const { data, loading, reload, refresh } = useAsync(
     () => (user ? notificationsApi.list(user.id, 0, 50) : Promise.resolve(null)),
     [user?.id],
   )
+  useRevalidateOnFocus(refresh)
   const rows = data?.content ?? []
   const hasUnread = rows.some((n) => !n.readAt)
 

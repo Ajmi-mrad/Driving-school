@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/core/auth/AuthContext'
 import { useAsync } from '@/core/hooks/useAsync'
+import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { notificationsApi } from '@/core/api'
 import { formatRelativeShort } from '@/core/format'
 
@@ -23,10 +24,11 @@ export function NotificationsBell() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const { data, reload } = useAsync(
+  const { data, reload, refresh } = useAsync(
     () => (user ? notificationsApi.list(user.id, 0, 6) : Promise.resolve(null)),
     [user?.id],
   )
+  useRevalidateOnFocus(refresh)
   const rows = data?.content ?? []
   const unread = rows.filter((n) => !n.readAt).length
 

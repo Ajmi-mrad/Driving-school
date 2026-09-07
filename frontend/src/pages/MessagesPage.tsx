@@ -1,30 +1,45 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Send } from 'lucide-react'
+import { ArrowLeft, Plus, Send } from 'lucide-react'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/core/auth/AuthContext'
 import { useAsync } from '@/core/hooks/useAsync'
+import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { conversationsApi, usersApi } from '@/core/api'
+import { ApiError } from '@/core/api/client'
 import type { Conversation, User } from '@/core/types'
 import { fullName, initials, formatTime, formatRelativeShort } from '@/core/format'
 
 export function MessagesPage() {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, roles } = useAuth()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  const [newOpen, setNewOpen] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
 
-  const { data: conversations, reload: reloadConvs } = useAsync(
+  // A conversation is always monitor↔client: a monitor chats with students, a
+  // student with instructors.
+  const contactRole = roles.includes('MONITOR') ? 'CLIENT' : 'MONITOR'
+
+  const { data: conversations, reload: reloadConvs, refresh: refreshConvs } = useAsync(
     () => (user ? conversationsApi.list(user.id) : Promise.resolve([])),
     [user?.id],
   )
-  const { data: users } = useAsync(() => usersApi.list(), [])
+  useRevalidateOnFocus(refreshConvs)
+  const { data: users } = useAsync(() => usersApi.contacts(), [])
 
   const userMap = useMemo(
     () => new Map((users ?? []).map((u) => [u.id, u])),
@@ -43,13 +58,14 @@ export function MessagesPage() {
   )
   const onlineSet = useMemo(() => new Set(presence ?? []), [presence])
 
-  const { data: page, loading: loadingMsgs, reload: reloadMsgs } = useAsync(
+  const { data: page, loading: loadingMsgs, reload: reloadMsgs, refresh: refreshMsgs } = useAsync(
     () =>
       selectedId
         ? conversationsApi.messages(selectedId, 0, 50)
         : Promise.resolve(null),
     [selectedId],
   )
+  useRevalidateOnFocus(refreshMsgs)
   const messages = page?.content ?? []
 
   // Mark read when opening a conversation.
@@ -68,13 +84,34 @@ export function MessagesPage() {
 
   const send = async () => {
     if (!selectedId || !user || !draft.trim()) return
-    await conversationsApi.send(selectedId, user.id, draft.trim())
-    setDraft('')
-    reloadMsgs()
-    reloadConvs()
+    try {
+      await conversationsApi.send(selectedId, user.id, draft.trim())
+      setDraft('')
+      reloadMsgs()
+      reloadConvs()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t('common.error'))
+    }
   }
 
   const partner = (c: Conversation): User | undefined => userMap.get(counterpartId(c))
+
+  const contacts = useMemo(
+    () => (users ?? []).filter((u) => u.id !== user?.id && u.roles.includes(contactRole)),
+    [users, user?.id, contactRole],
+  )
+
+  const startConversation = async (counterpartId: string) => {
+    if (!user) return
+    try {
+      const conv = await conversationsApi.getOrCreate(user.id, counterpartId)
+      reloadConvs()
+      setSelectedId(conv.id)
+      setNewOpen(false)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t('common.error'))
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -88,6 +125,13 @@ export function MessagesPage() {
             selectedId && 'hidden md:flex',
           )}
         >
+          <div className="flex items-center justify-between gap-2 border-b p-3">
+            <span className="text-sm font-medium">{t('nav.messages')}</span>
+            <Button size="sm" variant="outline" onClick={() => setNewOpen(true)}>
+              <Plus className="size-4" />
+              {t('messages.newConversation')}
+            </Button>
+          </div>
           {(conversations ?? []).length === 0 ? (
             <p className="p-6 text-center text-sm text-muted-foreground">
               {t('messages.empty')}
@@ -237,6 +281,38 @@ export function MessagesPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('messages.newConversation')}</DialogTitle>
+          </DialogHeader>
+          {contacts.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              {t('messages.noContacts')}
+            </p>
+          ) : (
+            <ul className="-mx-2 max-h-80 divide-y overflow-y-auto">
+              {contacts.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => startConversation(c.id)}
+                    className="flex w-full items-center gap-3 rounded-lg p-3 text-start hover:bg-accent"
+                  >
+                    <Avatar className="size-9">
+                      <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                        {initials(c)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="truncate font-medium">{fullName(c)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

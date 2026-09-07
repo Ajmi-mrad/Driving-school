@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { KeyRound, MoreHorizontal, Plus, UserX } from 'lucide-react'
+import { KeyRound, MoreHorizontal, Plus, UserCheck, UserX } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/common/PageHeader'
 import { DataTable, type Column } from '@/components/common/DataTable'
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { UserFormDialog } from '@/components/users/UserFormDialog'
 import { useAsync } from '@/core/hooks/useAsync'
+import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { usersApi } from '@/core/api'
 import { ROLES, type Role, type User } from '@/core/types'
 import { fullName, initials } from '@/core/format'
@@ -36,10 +37,11 @@ export function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null)
   const [toDeactivate, setToDeactivate] = useState<User | null>(null)
 
-  const { data, loading, reload } = useAsync(
+  const { data, loading, reload, refresh } = useAsync(
     () => usersApi.list(roleFilter === 'ALL' ? undefined : roleFilter),
     [roleFilter],
   )
+  useRevalidateOnFocus(refresh)
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -62,13 +64,19 @@ export function UsersPage() {
   }
 
   const deactivate = async (user: User) => {
-    await usersApi.deactivate(user.id)
+    await usersApi.deactivate(user.internalId ?? user.id)
     toast.success(t('users.deactivatedToast'))
     reload()
   }
 
+  const activate = async (user: User) => {
+    await usersApi.update(user.internalId ?? user.id, { active: true })
+    toast.success(t('users.activatedToast'))
+    reload()
+  }
+
   const resetPassword = async (user: User) => {
-    await usersApi.resetPassword(user.id)
+    await usersApi.resetPassword(user.internalId ?? user.id)
     toast.success(t('users.resetPasswordSent'))
   }
 
@@ -132,13 +140,18 @@ export function UsersPage() {
               <KeyRound className="size-4" />
               {t('users.resetPassword')}
             </DropdownMenuItem>
-            {u.active && (
+            {u.active ? (
               <DropdownMenuItem
                 className="text-destructive"
                 onClick={() => setToDeactivate(u)}
               >
                 <UserX className="size-4" />
                 {t('users.deactivate')}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={() => activate(u)}>
+                <UserCheck className="size-4" />
+                {t('users.activate')}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
