@@ -16,6 +16,7 @@ public record SessionResponse(
         Instant endTime,
         SessionStatus status,
         String notes,
+        String decisionNote,
         Instant createdAt,
         String createdBy,
         Instant updatedAt,

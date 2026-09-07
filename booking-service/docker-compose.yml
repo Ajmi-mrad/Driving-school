@@ -1,0 +1,63 @@
+services:
+  # PostgreSQL dédié au booking-service.
+  booking-postgres:
+    image: postgres:16-alpine
+    container_name: booking-postgres
+    environment:
+      POSTGRES_DB: ${BOOKING_DB_NAME:-bookingdb}
+      POSTGRES_USER: ${BOOKING_DB_USER:-bookinguser}
+      POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:-bookingpass}
+    ports:
+      - "5435:5432"   # exposé en 5435 (auth=5433, vehicle=5434, comm=5436, finance=5437)
+    volumes:
+      - booking-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BOOKING_DB_USER:-bookinguser} -d ${BOOKING_DB_NAME:-bookingdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auto-ecole
+
+  booking-service:
+    build: .
+    container_name: booking-service
+    environment:
+      BOOKING_DB_URL: jdbc:postgresql://booking-postgres:5432/${BOOKING_DB_NAME:-bookingdb}
+      BOOKING_DB_USER: ${BOOKING_DB_USER:-bookinguser}
+      BOOKING_DB_PASSWORD: ${BOOKING_DB_PASSWORD:-bookingpass}
+      # Keycloak joignable via le réseau partagé de la stack auth-service
+      KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
+      KEYCLOAK_TOKEN_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/token
+      KEYCLOAK_BOOKING_CLIENT_ID: ${KEYCLOAK_BOOKING_CLIENT_ID:-booking-service}
+      KEYCLOAK_BOOKING_SERVICE_SECRET: ${KEYCLOAK_BOOKING_SERVICE_SECRET:-bookingServiceSecretChangeMe}
+      SERVER_PORT: 8083
+      # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
+      EUREKA_ENABLED: "true"
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka
+      # Traces -> OpenTelemetry Collector (observability stack, same network).
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    ports:
+      - "8083:8083"
+    depends_on:
+      booking-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - auto-ecole
+
+volumes:
+  booking-postgres-data:
+
+# Réseau partagé créé par la stack auth-service (contient Keycloak).
+# Prérequis : la stack auth-service doit tourner (docker compose up dans auth-service/).
+networks:
+  auto-ecole:
+    external: true
+    name: auth-service_auto-ecole

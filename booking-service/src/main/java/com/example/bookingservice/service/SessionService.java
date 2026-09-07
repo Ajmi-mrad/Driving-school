@@ -17,11 +17,13 @@ import com.example.bookingservice.exception.NoVehicleAvailableException;
 import com.example.bookingservice.exception.SessionNotFoundException;
 import com.example.bookingservice.mapper.SessionMapper;
 import com.example.bookingservice.repository.SessionRepository;
+import com.example.bookingservice.repository.SessionSpecifications;
 import com.example.bookingservice.web.dto.CreateSessionRequest;
 import com.example.bookingservice.web.dto.RescheduleRequest;
 import com.example.bookingservice.web.dto.SessionResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -183,26 +185,35 @@ public class SessionService {
                 monitorId = null;
             }
         }
-        return sessionRepository.search(status, type, from, to, monitorId, clientId).stream()
+        return sessionRepository.findAll(
+                        SessionSpecifications.filter(status, type, from, to, monitorId, clientId),
+                        Sort.by(Sort.Direction.ASC, "startTime")).stream()
                 .map(sessionMapper::toResponse)
                 .toList();
     }
 
     @Transactional
-    public SessionResponse confirm(UUID id) {
+    public SessionResponse confirm(UUID id, String comment) {
         Session session = findOrThrow(id);
         requireStatus(session, SessionStatus.PENDING, "Seule une séance en attente peut être confirmée");
         ensureNoConflict(session);
         session.setStatus(SessionStatus.CONFIRMED);
+        session.setDecisionNote(normalizeComment(comment));
         return sessionMapper.toResponse(sessionRepository.save(session));
     }
 
     @Transactional
-    public SessionResponse refuse(UUID id) {
+    public SessionResponse refuse(UUID id, String comment) {
         Session session = findOrThrow(id);
         requireStatus(session, SessionStatus.PENDING, "Seule une séance en attente peut être refusée");
         session.setStatus(SessionStatus.REFUSED);
+        session.setDecisionNote(normalizeComment(comment));
         return sessionMapper.toResponse(sessionRepository.save(session));
+    }
+
+    /** Normalise une note de décision : {@code null} si vide/blanche. */
+    private String normalizeComment(String comment) {
+        return (comment == null || comment.isBlank()) ? null : comment.trim();
     }
 
     @Transactional

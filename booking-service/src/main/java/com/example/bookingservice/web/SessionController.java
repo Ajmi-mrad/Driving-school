@@ -4,6 +4,7 @@ import com.example.bookingservice.domain.SessionStatus;
 import com.example.bookingservice.domain.SessionType;
 import com.example.bookingservice.service.SessionService;
 import com.example.bookingservice.web.dto.CreateSessionRequest;
+import com.example.bookingservice.web.dto.DecisionRequest;
 import com.example.bookingservice.web.dto.RescheduleRequest;
 import com.example.bookingservice.web.dto.SessionResponse;
 import jakarta.validation.Valid;
@@ -67,14 +68,16 @@ public class SessionController {
 
     @PatchMapping("/{id}/confirm")
     @PreAuthorize("hasAnyRole('OWNER','SECRETARY','MONITOR')")
-    public SessionResponse confirm(@PathVariable UUID id) {
-        return sessionService.confirm(id);
+    public SessionResponse confirm(@PathVariable UUID id,
+                                   @Valid @RequestBody(required = false) DecisionRequest request) {
+        return sessionService.confirm(id, request == null ? null : request.comment());
     }
 
     @PatchMapping("/{id}/refuse")
     @PreAuthorize("hasAnyRole('OWNER','SECRETARY','MONITOR')")
-    public SessionResponse refuse(@PathVariable UUID id) {
-        return sessionService.refuse(id);
+    public SessionResponse refuse(@PathVariable UUID id,
+                                  @Valid @RequestBody(required = false) DecisionRequest request) {
+        return sessionService.refuse(id, request == null ? null : request.comment());
     }
 
     @PatchMapping("/{id}/cancel")
