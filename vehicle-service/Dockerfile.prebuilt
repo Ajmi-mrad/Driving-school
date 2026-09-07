@@ -1,0 +1,11 @@
+# Runtime-only image using a jar built on the host (workaround for an in-BuildKit
+# Maven stall on this machine). Mirrors the runtime stage of the main Dockerfile.
+FROM eclipse-temurin:17-jre-alpine@sha256:02320dd4ce20e243dfb915c686089cf9315c763084fafbb12d5c9993aee18b57 AS runtime
+WORKDIR /app
+RUN apk --no-cache upgrade \
+    && apk add --no-cache curl \
+    && addgroup -S app && adduser -S -G app app
+COPY target/*.jar app.jar
+USER app
+EXPOSE 8082
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
