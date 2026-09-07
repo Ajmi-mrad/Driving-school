@@ -4,13 +4,16 @@ import com.example.financeservice.service.EnrollmentService;
 import com.example.financeservice.web.dto.ConsumeRequest;
 import com.example.financeservice.web.dto.CreateEnrollmentRequest;
 import com.example.financeservice.web.dto.EnrollmentResponse;
+import com.example.financeservice.web.dto.UpdateEnrollmentRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -58,11 +61,26 @@ public class EnrollmentController {
         return enrollmentService.list(clientId, AuthSupport.sub(auth), AuthSupport.roles(auth));
     }
 
+    /** Modification d'une inscription : changement de forfait et/ou de statut. */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY')")
+    public EnrollmentResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateEnrollmentRequest request) {
+        return enrollmentService.update(id, request);
+    }
+
     /** Décompte de consommation d'une séance réalisée (appelé par le booking-service). */
     @PostMapping("/consume")
     @PreAuthorize("hasAnyRole('OWNER','SECRETARY')")
     public ResponseEntity<Void> consume(@Valid @RequestBody ConsumeRequest request) {
         enrollmentService.consume(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Annulation (soft delete) d'une inscription. Refusée (409) si des paiements y sont rattachés. */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY')")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        enrollmentService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

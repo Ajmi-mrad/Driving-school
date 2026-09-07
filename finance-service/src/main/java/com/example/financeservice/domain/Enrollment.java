@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -20,6 +21,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "enrollments")
+@SQLRestriction("deleted = false")
 public class Enrollment extends Auditable {
 
     @Id
@@ -56,6 +58,21 @@ public class Enrollment extends Auditable {
     public BigDecimal outstanding() {
         BigDecimal diff = totalPrice.subtract(amountPaid);
         return diff.signum() < 0 ? BigDecimal.ZERO : diff;
+    }
+
+    /**
+     * Applique une variation de paiement (positive = encaissé, négative = annulé), en bornant le
+     * payé à zéro, puis réconcilie le statut : soldé → {@code COMPLETED}, sinon {@code ACTIVE}.
+     * Une inscription {@code CANCELLED} n'est pas modifiée.
+     */
+    public void applyPaymentDelta(BigDecimal delta) {
+        this.amountPaid = this.amountPaid.add(delta).max(BigDecimal.ZERO);
+        if (this.status == EnrollmentStatus.CANCELLED) {
+            return;
+        }
+        this.status = this.amountPaid.compareTo(this.totalPrice) >= 0
+                ? EnrollmentStatus.COMPLETED
+                : EnrollmentStatus.ACTIVE;
     }
 
     public UUID getId() {

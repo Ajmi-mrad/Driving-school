@@ -13,4 +13,6 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
     List<Enrollment> findByClientIdOrderByEnrolledAtDesc(String clientId);
 
     Optional<Enrollment> findFirstByClientIdAndStatusOrderByEnrolledAtAsc(String clientId, EnrollmentStatus status);
+
+    List<Enrollment> findByForfaitIdAndStatus(UUID forfaitId, EnrollmentStatus status);
 }

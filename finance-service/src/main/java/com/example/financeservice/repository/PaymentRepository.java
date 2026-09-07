@@ -11,4 +11,7 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     List<Payment> findByClientIdOrderByPaidAtDesc(String clientId);
 
     List<Payment> findByEnrollmentIdOrderByPaidAtDesc(UUID enrollmentId);
+
+    /** Nombre de paiements vivants (non annulés) d'une inscription — @SQLRestriction filtre les annulés. */
+    long countByEnrollmentId(UUID enrollmentId);
 }

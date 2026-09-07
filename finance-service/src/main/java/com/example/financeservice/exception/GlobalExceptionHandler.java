@@ -25,9 +25,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler({ForfaitNotFoundException.class, EnrollmentNotFoundException.class})
+    @ExceptionHandler({ForfaitNotFoundException.class, EnrollmentNotFoundException.class,
+            PaymentNotFoundException.class, InvoiceNotFoundException.class})
     public ProblemDetail handleNotFound(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(EnrollmentHasPaymentsException.class)
+    public ProblemDetail handleConflict(EnrollmentHasPaymentsException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(CrossServiceValidationException.class)
@@ -35,8 +41,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
-    @ExceptionHandler(InvalidPaymentException.class)
-    public ProblemDetail handleInvalidPayment(InvalidPaymentException ex) {
+    @ExceptionHandler({InvalidPaymentException.class, InvalidEnrollmentException.class})
+    public ProblemDetail handleInvalidPayment(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
     }
 

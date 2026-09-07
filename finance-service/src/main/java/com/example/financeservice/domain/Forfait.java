@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "forfaits")
+@SQLRestriction("deleted = false")
 public class Forfait extends Auditable {
 
     @Id

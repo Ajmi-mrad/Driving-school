@@ -4,13 +4,16 @@ import com.example.financeservice.service.PaymentService;
 import com.example.financeservice.web.dto.CreatePaymentRequest;
 import com.example.financeservice.web.dto.PaymentResponse;
 import com.example.financeservice.web.dto.RemindRequest;
+import com.example.financeservice.web.dto.UpdatePaymentRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -51,6 +54,13 @@ public class PaymentController {
         return paymentService.list(clientId, AuthSupport.sub(auth), AuthSupport.roles(auth));
     }
 
+    /** Modification d'un paiement : montant/méthode/référence ; le solde de l'inscription est resynchronisé. */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY')")
+    public PaymentResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePaymentRequest request) {
+        return paymentService.update(id, request);
+    }
+
     /** Relance d'un impayé : notifie le client du solde restant dû. */
     @PostMapping("/{enrollmentId}/remind")
     @PreAuthorize("hasAnyRole('OWNER','SECRETARY')")
@@ -60,5 +70,13 @@ public class PaymentController {
         boolean delivered = paymentService.remind(enrollmentId, message);
         return delivered ? ResponseEntity.noContent().build()
                 : ResponseEntity.status(502).build();
+    }
+
+    /** Annulation (soft delete) d'un paiement : le solde de l'inscription est rétabli. */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY')")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        paymentService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

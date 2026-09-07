@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -19,6 +20,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "invoices")
+@SQLRestriction("deleted = false")
 public class Invoice extends Auditable {
 
     @Id
@@ -28,6 +30,10 @@ public class Invoice extends Auditable {
 
     @Column(name = "enrollment_id", nullable = false)
     private UUID enrollmentId;
+
+    /** Reçu rattaché à un paiement (null pour une facture d'achat) — permet d'annuler le bon reçu. */
+    @Column(name = "payment_id")
+    private UUID paymentId;
 
     @Column(name = "client_id", nullable = false, length = 255)
     private String clientId;
@@ -59,6 +65,14 @@ public class Invoice extends Auditable {
 
     public void setEnrollmentId(UUID enrollmentId) {
         this.enrollmentId = enrollmentId;
+    }
+
+    public UUID getPaymentId() {
+        return paymentId;
+    }
+
+    public void setPaymentId(UUID paymentId) {
+        this.paymentId = paymentId;
     }
 
     public String getClientId() {

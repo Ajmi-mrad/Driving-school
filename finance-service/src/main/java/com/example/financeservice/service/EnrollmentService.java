@@ -5,14 +5,18 @@ import com.example.financeservice.domain.Enrollment;
 import com.example.financeservice.domain.EnrollmentStatus;
 import com.example.financeservice.domain.Forfait;
 import com.example.financeservice.domain.InvoiceType;
+import com.example.financeservice.exception.EnrollmentHasPaymentsException;
 import com.example.financeservice.exception.EnrollmentNotFoundException;
 import com.example.financeservice.exception.ForfaitNotFoundException;
+import com.example.financeservice.exception.InvalidEnrollmentException;
 import com.example.financeservice.mapper.FinanceMapper;
 import com.example.financeservice.repository.EnrollmentRepository;
 import com.example.financeservice.repository.ForfaitRepository;
+import com.example.financeservice.repository.PaymentRepository;
 import com.example.financeservice.web.dto.ConsumeRequest;
 import com.example.financeservice.web.dto.CreateEnrollmentRequest;
 import com.example.financeservice.web.dto.EnrollmentResponse;
+import com.example.financeservice.web.dto.UpdateEnrollmentRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
@@ -40,19 +44,28 @@ public class EnrollmentService {
 
     private final EnrollmentRepository enrollmentRepository;
     private final ForfaitRepository forfaitRepository;
+    private final PaymentRepository paymentRepository;
     private final InvoiceService invoiceService;
     private final UserClient userClient;
+    private final SoftDelete softDelete;
+    private final AuditService auditService;
     private final FinanceMapper mapper;
 
     public EnrollmentService(EnrollmentRepository enrollmentRepository,
                              ForfaitRepository forfaitRepository,
+                             PaymentRepository paymentRepository,
                              InvoiceService invoiceService,
                              UserClient userClient,
+                             SoftDelete softDelete,
+                             AuditService auditService,
                              FinanceMapper mapper) {
         this.enrollmentRepository = enrollmentRepository;
         this.forfaitRepository = forfaitRepository;
+        this.paymentRepository = paymentRepository;
         this.invoiceService = invoiceService;
         this.userClient = userClient;
+        this.softDelete = softDelete;
+        this.auditService = auditService;
         this.mapper = mapper;
     }
 
@@ -75,6 +88,8 @@ public class EnrollmentService {
         Enrollment saved = enrollmentRepository.save(enrollment);
 
         invoiceService.issue(saved, InvoiceType.INVOICE, saved.getTotalPrice());
+        auditService.record("CREATED", "ENROLLMENT", saved.getId(),
+                "Forfait " + forfait.getName() + " — " + saved.getTotalPrice());
         return mapper.toEnrollmentResponse(saved);
     }
 
@@ -113,6 +128,86 @@ public class EnrollmentService {
                             Math.max(0, enrollment.getRemainingCodeSessions() - req.codeSessions()));
                 }, () -> log.warn("Consommation ignorée : aucune inscription active pour le client {}",
                         req.clientId()));
+    }
+
+    /**
+     * Annule (soft delete) une inscription. Refusée si des paiements vivants y sont rattachés
+     * (il faut les annuler d'abord). Les factures/reçus restants sont annulés au passage.
+     */
+    @Transactional
+    public void delete(UUID id) {
+        Enrollment enrollment = enrollmentRepository.findById(id)
+                .orElseThrow(() -> new EnrollmentNotFoundException(id));
+        if (paymentRepository.countByEnrollmentId(id) > 0) {
+            throw new EnrollmentHasPaymentsException(id);
+        }
+        invoiceService.voidForEnrollment(id);
+        softDelete.mark(enrollment);
+        auditService.record("DELETED", "ENROLLMENT", id, null);
+    }
+
+    /**
+     * Modifie une inscription : changement de forfait (le prix total suit le catalogue et les heures /
+     * séances restantes sont ajustées du delta pour préserver la consommation ; la facture d'inscription
+     * suit le nouveau total) et/ou de statut. Refusé si le nouveau total est inférieur au montant déjà payé.
+     */
+    @Transactional
+    public EnrollmentResponse update(UUID id, UpdateEnrollmentRequest req) {
+        Enrollment enrollment = enrollmentRepository.findById(id)
+                .orElseThrow(() -> new EnrollmentNotFoundException(id));
+
+        if (!req.forfaitId().equals(enrollment.getForfaitId())) {
+            Forfait newForfait = forfaitRepository.findById(req.forfaitId())
+                    .orElseThrow(() -> new ForfaitNotFoundException(req.forfaitId()));
+            if (newForfait.getPrice().compareTo(enrollment.getAmountPaid()) < 0) {
+                throw new InvalidEnrollmentException(
+                        "Nouveau total (" + newForfait.getPrice() + ") inférieur au montant déjà payé ("
+                                + enrollment.getAmountPaid() + ")");
+            }
+            // Delta sur les heures/séances restantes pour préserver la consommation. Si l'ancien forfait
+            // n'est plus disponible (supprimé), on réinitialise sur les totaux du nouveau forfait.
+            forfaitRepository.findById(enrollment.getForfaitId()).ifPresentOrElse(oldForfait -> {
+                enrollment.setRemainingDrivingHours(Math.max(0,
+                        enrollment.getRemainingDrivingHours()
+                                + newForfait.getDrivingHours() - oldForfait.getDrivingHours()));
+                enrollment.setRemainingCodeSessions(Math.max(0,
+                        enrollment.getRemainingCodeSessions()
+                                + newForfait.getCodeSessions() - oldForfait.getCodeSessions()));
+            }, () -> {
+                enrollment.setRemainingDrivingHours(newForfait.getDrivingHours());
+                enrollment.setRemainingCodeSessions(newForfait.getCodeSessions());
+            });
+            enrollment.setForfaitId(newForfait.getId());
+            enrollment.setTotalPrice(newForfait.getPrice());
+            invoiceService.updateEnrollmentInvoiceAmount(enrollment.getId(), newForfait.getPrice());
+        }
+
+        enrollment.setStatus(req.status());
+        auditService.record("UPDATED", "ENROLLMENT", id, "Statut " + enrollment.getStatus());
+        return mapper.toEnrollmentResponse(enrollment);
+    }
+
+    /**
+     * Propage le nouveau prix d'un forfait aux inscriptions ACTIVES qui le référencent : leur
+     * {@code totalPrice} suit le catalogue (le solde dû se recalcule via {@code outstanding()} ;
+     * les paiements et factures déjà émis ne sont pas modifiés). Les inscriptions terminées ou
+     * annulées restent figées.
+     */
+    @Transactional
+    public int syncForfaitPrice(UUID forfaitId, BigDecimal newPrice) {
+        List<Enrollment> actives =
+                enrollmentRepository.findByForfaitIdAndStatus(forfaitId, EnrollmentStatus.ACTIVE);
+        int changed = 0;
+        for (Enrollment enrollment : actives) {
+            if (enrollment.getTotalPrice().compareTo(newPrice) != 0) {
+                enrollment.setTotalPrice(newPrice);
+                changed++;
+            }
+        }
+        if (changed > 0) {
+            log.info("Forfait {} : prix propagé à {} inscription(s) active(s)", forfaitId, changed);
+        }
+        return changed;
     }
 
     /**

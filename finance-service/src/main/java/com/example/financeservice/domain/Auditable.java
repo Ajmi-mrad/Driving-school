@@ -35,6 +35,42 @@ public abstract class Auditable {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    // Suppression logique (soft delete) : la ligne est conservée pour l'audit et
+    // la traçabilité. Les entités portent @SQLRestriction("deleted = false") pour
+    // masquer automatiquement les lignes supprimées des requêtes.
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "deleted_by", length = 255)
+    private String deletedBy;
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Instant deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    public String getDeletedBy() {
+        return deletedBy;
+    }
+
+    public void setDeletedBy(String deletedBy) {
+        this.deletedBy = deletedBy;
+    }
+
     public String getCreatedBy() {
         return createdBy;
     }

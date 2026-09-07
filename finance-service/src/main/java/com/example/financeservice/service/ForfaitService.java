@@ -21,10 +21,20 @@ import java.util.UUID;
 public class ForfaitService {
 
     private final ForfaitRepository forfaitRepository;
+    private final EnrollmentService enrollmentService;
+    private final SoftDelete softDelete;
+    private final AuditService auditService;
     private final FinanceMapper mapper;
 
-    public ForfaitService(ForfaitRepository forfaitRepository, FinanceMapper mapper) {
+    public ForfaitService(ForfaitRepository forfaitRepository,
+                          EnrollmentService enrollmentService,
+                          SoftDelete softDelete,
+                          AuditService auditService,
+                          FinanceMapper mapper) {
         this.forfaitRepository = forfaitRepository;
+        this.enrollmentService = enrollmentService;
+        this.softDelete = softDelete;
+        this.auditService = auditService;
         this.mapper = mapper;
     }
 
@@ -37,7 +47,9 @@ public class ForfaitService {
         forfait.setCodeSessions(req.codeSessions());
         forfait.setPrice(req.price());
         forfait.setActive(true);
-        return mapper.toForfaitResponse(forfaitRepository.save(forfait));
+        Forfait saved = forfaitRepository.save(forfait);
+        auditService.record("CREATED", "FORFAIT", saved.getId(), saved.getName());
+        return mapper.toForfaitResponse(saved);
     }
 
     @Transactional
@@ -49,7 +61,19 @@ public class ForfaitService {
         forfait.setCodeSessions(req.codeSessions());
         forfait.setPrice(req.price());
         forfait.setActive(req.active());
+        // Propage le nouveau prix aux inscriptions actives (même transaction).
+        enrollmentService.syncForfaitPrice(id, req.price());
+        auditService.record("UPDATED", "FORFAIT", id, forfait.getName());
         return mapper.toForfaitResponse(forfait);
+    }
+
+    /** Suppression logique du forfait : retiré du catalogue, conservé pour l'audit. Les inscriptions
+     * existantes (instantané) ne sont pas affectées. */
+    @Transactional
+    public void delete(UUID id) {
+        Forfait forfait = forfaitRepository.findById(id).orElseThrow(() -> new ForfaitNotFoundException(id));
+        softDelete.mark(forfait);
+        auditService.record("DELETED", "FORFAIT", id, forfait.getName());
     }
 
     @Transactional(readOnly = true)
