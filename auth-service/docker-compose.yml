@@ -60,6 +60,8 @@ services:
     volumes:
       # Import automatique du realm auto-ecole au démarrage
       - ./realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      # Thème de connexion personnalisé (Keycloakify) — chargé comme provider.
+      - ../keycloak-theme/dist_keycloak/auto-ecole-keycloak-theme.jar:/opt/keycloak/providers/auto-ecole-keycloak-theme.jar:ro
     depends_on:
       kc-postgres:
         condition: service_healthy

@@ -122,15 +122,6 @@
         "clientRole": false,
         "containerId": "97142052-1a04-484c-b860-7480a7fa74f1",
         "attributes": {}
-      },
-      {
-        "id": "9f437642-5880-44d2-9b9f-39173493996b",
-        "name": "SERVICE",
-        "description": "Compte de service inter-services (client_credentials)",
-        "composite": false,
-        "clientRole": false,
-        "containerId": "97142052-1a04-484c-b860-7480a7fa74f1",
-        "attributes": {}
       }
     ],
     "client": {
@@ -547,22 +538,6 @@
       "groups": []
     },
     {
-      "id": "fd8c0e78-8860-4f9e-830b-8642ebde1279",
-      "username": "service-account-booking-service",
-      "emailVerified": false,
-      "enabled": true,
-      "totp": false,
-      "serviceAccountClientId": "booking-service",
-      "disableableCredentialTypes": [],
-      "requiredActions": [],
-      "realmRoles": [
-        "default-roles-auto-ecole",
-        "SERVICE"
-      ],
-      "notBefore": 0,
-      "groups": []
-    },
-    {
       "username": "owner",
       "enabled": true,
       "emailVerified": true,
@@ -813,10 +788,10 @@
       ]
     },
     {
-      "id": "83d0bc85-6cb5-4553-9feb-a1edb7bec144",
-      "clientId": "booking-service",
+      "id": "d3f8a6c2-1b4e-4f9a-9c17-2a6e5b8d4f10",
+      "clientId": "finance-service",
       "name": "",
-      "description": "Compte de service du booking-service (appels sortants client_credentials).",
+      "description": "Compte de service du finance-service (appels sortants client_credentials).",
       "rootUrl": "",
       "adminUrl": "",
       "baseUrl": "",
@@ -824,7 +799,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "bookingServiceSecretChangeMe",
+      "secret": "financeServiceSecretChangeMe",
       "redirectUris": [
         "/*"
       ],
@@ -875,10 +850,10 @@
       ]
     },
     {
-      "id": "d3f8a6c2-1b4e-4f9a-9c17-2a6e5b8d4f10",
-      "clientId": "finance-service",
+      "id": "9a734176-e65d-4ca6-80a6-17d07949d8cd",
+      "clientId": "booking-service",
       "name": "",
-      "description": "Compte de service du finance-service (appels sortants client_credentials).",
+      "description": "Compte de service du booking-service (appels sortants client_credentials).",
       "rootUrl": "",
       "adminUrl": "",
       "baseUrl": "",
@@ -886,7 +861,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "financeServiceSecretChangeMe",
+      "secret": "bookingServiceSecretChangeMe",
       "redirectUris": [
         "/*"
       ],
@@ -2919,7 +2894,5 @@
   },
   "clientPolicies": {
     "policies": []
-  },
-  "loginTheme": "auto-ecole",
-  "passwordPolicy": "length(8) and upperCase(1) and specialChars(1) and digits(1)"
+  }
 }
