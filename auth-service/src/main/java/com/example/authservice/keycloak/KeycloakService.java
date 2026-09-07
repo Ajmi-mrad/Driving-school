@@ -73,6 +73,13 @@ public class KeycloakService {
         log.info("Rôle {} affecté à l'utilisateur Keycloak {}", roleName, userId);
     }
 
+    /** Retire un rôle de realm à un utilisateur (utilisé lors de la modification des rôles). */
+    public void removeRealmRole(String userId, String roleName) {
+        RoleRepresentation role = realm().roles().get(roleName).toRepresentation();
+        realm().users().get(userId).roles().realmLevel().remove(List.of(role));
+        log.info("Rôle {} retiré à l'utilisateur Keycloak {}", roleName, userId);
+    }
+
     /** Met à jour les attributs d'identité (email, prénom, nom) propagés vers Keycloak. */
     public void updateUser(String userId, String email, String firstName, String lastName) {
         UserResource userResource = realm().users().get(userId);
