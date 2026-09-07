@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from '@/components/RequireAuth'
 import { RequireRole } from '@/components/RequireRole'
 import { LoginPage } from '@/pages/LoginPage'
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { VehiclesPage } from '@/pages/VehiclesPage'
@@ -13,13 +14,15 @@ import { InvoicesPage } from '@/pages/InvoicesPage'
 import { MessagesPage } from '@/pages/MessagesPage'
 import { NotificationsPage } from '@/pages/NotificationsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
-import { hasAnyRole, isStaff, permissions } from '@/core/auth/roles'
+import { AuditPage } from '@/pages/AuditPage'
+import { hasAnyRole, isOwner, isStaff, permissions } from '@/core/auth/roles'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
         <Route element={<RequireAuth />}>
           <Route index element={<DashboardPage />} />
@@ -55,6 +58,9 @@ function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route element={<RequireRole allow={isStaff} />}>
             <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+          <Route element={<RequireRole allow={isOwner} />}>
+            <Route path="/audit" element={<AuditPage />} />
           </Route>
         </Route>
 

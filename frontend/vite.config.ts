@@ -11,4 +11,10 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
+  server: {
+    // Matches the gateway CORS allow-list and the Keycloak client's
+    // registered redirect URIs (http://localhost:4200/*).
+    port: 4200,
+    strictPort: true,
+  },
 })

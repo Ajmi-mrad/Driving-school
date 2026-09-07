@@ -5,8 +5,7 @@ import type {
   Vehicle,
   VehicleStatus,
 } from '../types'
-import { db } from '../mock/db'
-import { ApiError, clone, delay, uid } from './client'
+import { qs, request } from './client'
 
 export interface VehicleInput {
   brand: string
@@ -28,59 +27,79 @@ export interface MaintenanceInput {
   mileage: number
 }
 
+/** Backend MaintenanceResponse uses `performedAt` and omits `mileage`. */
+interface MaintenanceResponse {
+  id: string
+  vehicleId: string
+  type: MaintenanceType
+  performedAt: string
+  cost: number
+  description: string
+}
+
+function toMaintenance(res: MaintenanceResponse): MaintenanceRecord {
+  return {
+    id: res.id,
+    vehicleId: res.vehicleId,
+    type: res.type,
+    description: res.description,
+    cost: res.cost,
+    date: res.performedAt,
+    mileage: 0, // not tracked server-side
+  }
+}
+
 export const vehiclesApi = {
   list(filter?: { status?: VehicleStatus; fuelType?: FuelType }): Promise<Vehicle[]> {
-    const rows = db.vehicles.filter(
-      (v) =>
-        (!filter?.status || v.status === filter.status) &&
-        (!filter?.fuelType || v.fuelType === filter.fuelType),
-    )
-    return delay(clone(rows))
+    return request<Vehicle[]>(`/vehicles${qs(filter)}`)
   },
 
   get(id: string): Promise<Vehicle> {
-    const row = db.vehicles.find((v) => v.id === id)
-    if (!row) throw new ApiError(404, 'Véhicule introuvable')
-    return delay(clone(row))
+    return request<Vehicle>(`/vehicles/${id}`)
   },
 
   create(input: VehicleInput): Promise<Vehicle> {
-    const vehicle: Vehicle = { id: uid('v'), status: 'AVAILABLE', ...input }
-    db.vehicles.push(vehicle)
-    return delay(clone(vehicle))
+    return request<Vehicle>('/vehicles', { method: 'POST', body: input })
   },
 
   update(id: string, input: Partial<VehicleInput>): Promise<Vehicle> {
-    const row = db.vehicles.find((v) => v.id === id)
-    if (!row) throw new ApiError(404, 'Véhicule introuvable')
-    Object.assign(row, input)
-    return delay(clone(row))
+    return request<Vehicle>(`/vehicles/${id}`, { method: 'PUT', body: input })
   },
 
   setStatus(id: string, status: VehicleStatus): Promise<Vehicle> {
-    const row = db.vehicles.find((v) => v.id === id)
-    if (!row) throw new ApiError(404, 'Véhicule introuvable')
-    row.status = status
-    return delay(clone(row))
+    return request<Vehicle>(`/vehicles/${id}/status`, {
+      method: 'PATCH',
+      body: { status },
+    })
   },
 
   remove(id: string): Promise<void> {
-    const idx = db.vehicles.findIndex((v) => v.id === id)
-    if (idx === -1) throw new ApiError(404, 'Véhicule introuvable')
-    db.vehicles.splice(idx, 1)
-    return delay(undefined)
+    return request<void>(`/vehicles/${id}`, { method: 'DELETE' })
   },
 
-  listMaintenance(vehicleId: string): Promise<MaintenanceRecord[]> {
-    const rows = db.maintenance
-      .filter((m) => m.vehicleId === vehicleId)
-      .sort((a, b) => b.date.localeCompare(a.date))
-    return delay(clone(rows))
+  async listMaintenance(vehicleId: string): Promise<MaintenanceRecord[]> {
+    const rows = await request<MaintenanceResponse[]>(
+      `/vehicles/${vehicleId}/maintenance`,
+    )
+    return rows.map(toMaintenance)
   },
 
-  addMaintenance(vehicleId: string, input: MaintenanceInput): Promise<MaintenanceRecord> {
-    const record: MaintenanceRecord = { id: uid('m'), vehicleId, ...input }
-    db.maintenance.push(record)
-    return delay(clone(record))
+  async addMaintenance(
+    vehicleId: string,
+    input: MaintenanceInput,
+  ): Promise<MaintenanceRecord> {
+    const res = await request<MaintenanceResponse>(
+      `/vehicles/${vehicleId}/maintenance`,
+      {
+        method: 'POST',
+        body: {
+          type: input.type,
+          performedAt: input.date,
+          cost: input.cost,
+          description: input.description,
+        },
+      },
+    )
+    return toMaintenance(res)
   },
 }

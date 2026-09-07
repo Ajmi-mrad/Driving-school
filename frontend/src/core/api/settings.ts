@@ -1,13 +1,14 @@
 import type { BookingSettings } from '../types'
-import { db } from '../mock/db'
-import { clone, delay } from './client'
+import { request } from './client'
 
 export const settingsApi = {
   get(): Promise<BookingSettings> {
-    return delay(clone(db.bookingSettings))
+    return request<BookingSettings>('/booking-settings')
   },
   update(input: BookingSettings): Promise<BookingSettings> {
-    db.bookingSettings = { ...input }
-    return delay(clone(db.bookingSettings))
+    return request<BookingSettings>('/booking-settings', {
+      method: 'PUT',
+      body: input,
+    })
   },
 }

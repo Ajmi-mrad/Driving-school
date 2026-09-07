@@ -7,13 +7,14 @@ import {
   LayoutDashboard,
   MessageSquare,
   Package,
+  ScrollText,
   Settings,
   Users,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
 import type { Role } from '@/core/types'
-import { hasAnyRole, isStaff, permissions } from '@/core/auth/roles'
+import { hasAnyRole, isOwner, isStaff, permissions } from '@/core/auth/roles'
 
 export interface NavItem {
   to: string
@@ -56,5 +57,6 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { to: '/messages', labelKey: 'nav.messages', icon: MessageSquare, visible: permissions.chat },
   { to: '/notifications', labelKey: 'nav.notifications', icon: Bell, visible: always },
+  { to: '/audit', labelKey: 'nav.audit', icon: ScrollText, visible: isOwner },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings, visible: isStaff },
 ]

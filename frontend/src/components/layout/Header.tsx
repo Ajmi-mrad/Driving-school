@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Brand, SidebarNav } from './Sidebar'
-import { RoleSwitcher } from './RoleSwitcher'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { NotificationsBell } from '@/components/notifications/NotificationsBell'
 import { useAuth } from '@/core/auth/AuthContext'
@@ -60,7 +59,6 @@ export function Header() {
 
       <div className="flex-1" />
 
-      <RoleSwitcher />
       <LanguageSwitcher />
 
       {permissions.chat(roles) && (

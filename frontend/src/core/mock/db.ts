@@ -172,7 +172,7 @@ export const db: {
       model: '208',
       registrationNumber: 'EF-456-GH',
       gearboxType: 'AUTOMATIC',
-      fuelType: 'GASOLINE',
+      fuelType: 'PETROL',
       status: 'IN_USE',
       manufactureYear: 2022,
       mileage: 41230,

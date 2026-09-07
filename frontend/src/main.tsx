@@ -7,11 +7,13 @@ import { AuthProvider } from '@/core/auth/AuthContext'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { DirectionManager } from '@/components/DirectionManager'
-import { webStorage } from '@/lib/web-storage'
+import { createKeycloakAuth } from '@/lib/keycloak-auth'
+
+const authClient = createKeycloakAuth()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider storage={webStorage}>
+    <AuthProvider authClient={authClient}>
       <TooltipProvider>
         <DirectionManager />
         <App />

@@ -1,6 +1,5 @@
 import type { Session, SessionStatus, SessionType } from '../types'
-import { db } from '../mock/db'
-import { ApiError, clone, delay, uid } from './client'
+import { ApiError, qs, request } from './client'
 
 export interface SessionInput {
   type: SessionType
@@ -21,65 +20,47 @@ export interface SessionFilter {
   clientId?: string
 }
 
-function find(id: string): Session {
-  const row = db.sessions.find((s) => s.id === id)
-  if (!row) throw new ApiError(404, 'Séance introuvable')
-  return row
+/** Status → the PATCH action endpoint that produces it. */
+const ACTION_BY_STATUS: Partial<Record<SessionStatus, string>> = {
+  CONFIRMED: 'confirm',
+  REFUSED: 'refuse',
+  CANCELLED: 'cancel',
+  COMPLETED: 'complete',
 }
 
 export const sessionsApi = {
   list(filter: SessionFilter = {}): Promise<Session[]> {
-    const rows = db.sessions
-      .filter(
-        (s) =>
-          (!filter.status || s.status === filter.status) &&
-          (!filter.type || s.type === filter.type) &&
-          (!filter.monitorId || s.monitorId === filter.monitorId) &&
-          (!filter.clientId || s.clientId === filter.clientId) &&
-          (!filter.from || s.startTime >= filter.from) &&
-          (!filter.to || s.startTime <= filter.to),
-      )
-      .sort((a, b) => a.startTime.localeCompare(b.startTime))
-    return delay(clone(rows))
+    return request<Session[]>(`/sessions${qs(filter)}`)
   },
 
   get(id: string): Promise<Session> {
-    return delay(clone(find(id)))
+    return request<Session>(`/sessions/${id}`)
   },
 
   create(input: SessionInput): Promise<Session> {
-    const auto = db.bookingSettings.autoValidationEnabled
-    const session: Session = {
-      id: uid('s'),
-      status: auto ? 'CONFIRMED' : 'PENDING',
-      monitorId: input.monitorId ?? null,
-      vehicleId: input.vehicleId ?? null,
-      notes: input.notes ?? null,
-      type: input.type,
-      clientId: input.clientId,
-      startTime: input.startTime,
-      endTime: input.endTime,
-    }
-    db.sessions.push(session)
-    return delay(clone(session))
+    return request<Session>('/sessions', { method: 'POST', body: input })
   },
 
-  transition(id: string, status: SessionStatus): Promise<Session> {
-    const row = find(id)
-    row.status = status
-    return delay(clone(row))
+  transition(id: string, status: SessionStatus, comment?: string): Promise<Session> {
+    const action = ACTION_BY_STATUS[status]
+    if (!action) throw new ApiError(400, `Transition non supportée: ${status}`)
+    return request<Session>(`/sessions/${id}/${action}`, {
+      method: 'PATCH',
+      body: comment ? { comment } : undefined,
+    })
   },
 
-  confirm: (id: string) => sessionsApi.transition(id, 'CONFIRMED'),
-  refuse: (id: string) => sessionsApi.transition(id, 'REFUSED'),
+  /** Confirme une demande, avec une note facultative pour l'élève. */
+  confirm: (id: string, comment?: string) => sessionsApi.transition(id, 'CONFIRMED', comment),
+  /** Refuse une demande, avec une note facultative (ex. créneaux proposés). */
+  refuse: (id: string, comment?: string) => sessionsApi.transition(id, 'REFUSED', comment),
   cancel: (id: string) => sessionsApi.transition(id, 'CANCELLED'),
   complete: (id: string) => sessionsApi.transition(id, 'COMPLETED'),
 
   reschedule(id: string, startTime: string, endTime: string): Promise<Session> {
-    const row = find(id)
-    row.startTime = startTime
-    row.endTime = endTime
-    row.status = 'PENDING'
-    return delay(clone(row))
+    return request<Session>(`/sessions/${id}/reschedule`, {
+      method: 'PATCH',
+      body: { startTime, endTime },
+    })
   },
 }

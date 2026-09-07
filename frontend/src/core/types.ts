@@ -20,7 +20,14 @@ export type Role = (typeof ROLES)[number]
 // Users (auth-service)
 // ---------------------------------------------------------------------------
 export interface User {
+  /** Canonical cross-service identity: the Keycloak `sub`. Sessions, enrollments
+   *  and payments reference users by this id, and it matches the JWT-derived
+   *  current user. Use this everywhere except auth-service user-management CRUD. */
   id: string
+  /** auth-service internal DB id. Present only for users fetched from `/api/users`
+   *  (absent on the JWT-derived current user). Required by usersApi get/update/
+   *  deactivate/resetPassword, whose paths key on the internal id. */
+  internalId?: string
   username: string
   email: string
   firstName: string
@@ -38,7 +45,7 @@ export interface User {
 export const GEARBOX_TYPES = ['MANUAL', 'AUTOMATIC'] as const
 export type GearboxType = (typeof GEARBOX_TYPES)[number]
 
-export const FUEL_TYPES = ['GASOLINE', 'DIESEL', 'ELECTRIC', 'HYBRID'] as const
+export const FUEL_TYPES = ['PETROL', 'DIESEL', 'ELECTRIC', 'HYBRID', 'LPG'] as const
 export type FuelType = (typeof FUEL_TYPES)[number]
 
 export const VEHICLE_STATUSES = [
@@ -107,6 +114,8 @@ export interface Session {
   endTime: string // ISO datetime
   status: SessionStatus
   notes?: string | null
+  /** Note laissée par le staff/moniteur lors de la confirmation ou du refus. */
+  decisionNote?: string | null
 }
 
 export interface BookingSettings {
@@ -203,6 +212,38 @@ export interface Notification {
   referenceId?: string | null
   readAt?: string | null
   createdAt: string // ISO datetime
+}
+
+// ---------------------------------------------------------------------------
+// Audit log (owner-only)
+// ---------------------------------------------------------------------------
+export const AUDIT_ACTIONS = [
+  'CREATED',
+  'UPDATED',
+  'DELETED',
+  'VOIDED',
+  'DEACTIVATED',
+  'PASSWORD_RESET',
+] as const
+export type AuditAction = (typeof AUDIT_ACTIONS)[number]
+
+export const AUDIT_ENTITIES = [
+  'FORFAIT',
+  'ENROLLMENT',
+  'PAYMENT',
+  'INVOICE',
+  'USER',
+] as const
+export type AuditEntity = (typeof AUDIT_ENTITIES)[number]
+
+export interface AuditEvent {
+  id: string
+  occurredAt: string // ISO datetime
+  actor: string // Keycloak sub, or "system" for service accounts
+  action: string
+  entityType: string
+  entityId?: string | null
+  summary?: string | null
 }
 
 // ---------------------------------------------------------------------------

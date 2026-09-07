@@ -1,12 +1,17 @@
 import type {
   Enrollment,
+  EnrollmentStatus,
   Forfait,
   Invoice,
   Payment,
   PaymentMethod,
 } from '../types'
-import { db } from '../mock/db'
-import { ApiError, clone, delay, uid } from './client'
+import { qs, request, requestBlob } from './client'
+
+export interface EmailResult {
+  sent: number
+  skipped: number
+}
 
 // -- Forfaits ---------------------------------------------------------------
 export interface ForfaitInput {
@@ -20,65 +25,41 @@ export interface ForfaitInput {
 
 export const forfaitsApi = {
   list(activeOnly = false): Promise<Forfait[]> {
-    const rows = db.forfaits.filter((f) => !activeOnly || f.active)
-    return delay(clone(rows))
+    return request<Forfait[]>(`/forfaits${qs({ activeOnly })}`)
   },
   get(id: string): Promise<Forfait> {
-    const row = db.forfaits.find((f) => f.id === id)
-    if (!row) throw new ApiError(404, 'Forfait introuvable')
-    return delay(clone(row))
+    return request<Forfait>(`/forfaits/${id}`)
   },
   create(input: ForfaitInput): Promise<Forfait> {
-    const forfait: Forfait = { id: uid('f'), ...input }
-    db.forfaits.push(forfait)
-    return delay(clone(forfait))
+    return request<Forfait>('/forfaits', { method: 'POST', body: input })
   },
   update(id: string, input: Partial<ForfaitInput>): Promise<Forfait> {
-    const row = db.forfaits.find((f) => f.id === id)
-    if (!row) throw new ApiError(404, 'Forfait introuvable')
-    Object.assign(row, input)
-    return delay(clone(row))
+    return request<Forfait>(`/forfaits/${id}`, { method: 'PUT', body: input })
+  },
+  remove(id: string): Promise<void> {
+    return request<void>(`/forfaits/${id}`, { method: 'DELETE' })
   },
 }
 
 // -- Enrollments ------------------------------------------------------------
 export const enrollmentsApi = {
   list(clientId?: string): Promise<Enrollment[]> {
-    const rows = db.enrollments.filter((e) => !clientId || e.clientId === clientId)
-    return delay(clone(rows))
+    return request<Enrollment[]>(`/enrollments${qs({ clientId })}`)
   },
   get(id: string): Promise<Enrollment> {
-    const row = db.enrollments.find((e) => e.id === id)
-    if (!row) throw new ApiError(404, 'Inscription introuvable')
-    return delay(clone(row))
+    return request<Enrollment>(`/enrollments/${id}`)
   },
   create(clientId: string, forfaitId: string): Promise<Enrollment> {
-    const forfait = db.forfaits.find((f) => f.id === forfaitId)
-    if (!forfait) throw new ApiError(404, 'Forfait introuvable')
-    const enrollment: Enrollment = {
-      id: uid('e'),
-      clientId,
-      forfaitId,
-      status: 'ACTIVE',
-      totalPrice: forfait.price,
-      amountPaid: 0,
-      outstanding: forfait.price,
-      remainingDrivingHours: forfait.drivingHours,
-      remainingCodeSessions: forfait.codeSessions,
-      enrolledAt: new Date().toISOString(),
-    }
-    db.enrollments.push(enrollment)
-    // Issue an invoice, mirroring the backend flow.
-    db.invoices.push({
-      id: uid('i'),
-      enrollmentId: enrollment.id,
-      clientId,
-      number: `FAC-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`,
-      type: 'INVOICE',
-      amount: forfait.price,
-      issuedAt: enrollment.enrolledAt,
+    return request<Enrollment>('/enrollments', {
+      method: 'POST',
+      body: { clientId, forfaitId },
     })
-    return delay(clone(enrollment))
+  },
+  update(id: string, input: { forfaitId: string; status: EnrollmentStatus }): Promise<Enrollment> {
+    return request<Enrollment>(`/enrollments/${id}`, { method: 'PUT', body: input })
+  },
+  remove(id: string): Promise<void> {
+    return request<void>(`/enrollments/${id}`, { method: 'DELETE' })
   },
 }
 
@@ -92,51 +73,53 @@ export interface PaymentInput {
 
 export const paymentsApi = {
   list(clientId?: string): Promise<Payment[]> {
-    const rows = db.payments
-      .filter((p) => !clientId || p.clientId === clientId)
-      .sort((a, b) => b.paidAt.localeCompare(a.paidAt))
-    return delay(clone(rows))
+    return request<Payment[]>(`/payments${qs({ clientId })}`)
   },
   create(input: PaymentInput): Promise<Payment> {
-    const enrollment = db.enrollments.find((e) => e.id === input.enrollmentId)
-    if (!enrollment) throw new ApiError(404, 'Inscription introuvable')
-    const payment: Payment = {
-      id: uid('p'),
-      enrollmentId: input.enrollmentId,
-      clientId: enrollment.clientId,
-      amount: input.amount,
-      method: input.method,
-      reference: input.reference ?? null,
-      paidAt: new Date().toISOString(),
-    }
-    db.payments.push(payment)
-    enrollment.amountPaid += input.amount
-    enrollment.outstanding = Math.max(0, enrollment.totalPrice - enrollment.amountPaid)
-    // Issue a receipt.
-    db.invoices.push({
-      id: uid('i'),
-      enrollmentId: enrollment.id,
-      clientId: enrollment.clientId,
-      number: `REC-${new Date().getFullYear()}-${String(db.invoices.length + 1).padStart(4, '0')}`,
-      type: 'RECEIPT',
-      amount: input.amount,
-      issuedAt: payment.paidAt,
-    })
-    return delay(clone(payment))
+    return request<Payment>('/payments', { method: 'POST', body: input })
+  },
+  update(id: string, input: Pick<PaymentInput, 'amount' | 'method' | 'reference'>): Promise<Payment> {
+    return request<Payment>(`/payments/${id}`, { method: 'PUT', body: input })
   },
   remind(enrollmentId: string): Promise<void> {
-    const enrollment = db.enrollments.find((e) => e.id === enrollmentId)
-    if (!enrollment) throw new ApiError(404, 'Inscription introuvable')
-    return delay(undefined)
+    return request<void>(`/payments/${enrollmentId}/remind`, {
+      method: 'POST',
+      body: {},
+    })
+  },
+  remove(id: string): Promise<void> {
+    return request<void>(`/payments/${id}`, { method: 'DELETE' })
   },
 }
 
 // -- Invoices ---------------------------------------------------------------
 export const invoicesApi = {
   list(clientId?: string): Promise<Invoice[]> {
-    const rows = db.invoices
-      .filter((i) => !clientId || i.clientId === clientId)
-      .sort((a, b) => b.issuedAt.localeCompare(a.issuedAt))
-    return delay(clone(rows))
+    return request<Invoice[]>(`/invoices${qs({ clientId })}`)
+  },
+
+  /** PDF of a single document (staff, or the owning client). */
+  pdf(id: string): Promise<Blob> {
+    return requestBlob(`/invoices/${id}/pdf`)
+  },
+
+  /** ZIP archive of several documents' PDFs (staff only). */
+  zip(ids: string[]): Promise<Blob> {
+    return requestBlob(`/invoices/pdf${qs({ ids: ids.join(',') })}`)
+  },
+
+  /** Email documents to their clients, grouped per client (staff only). */
+  email(ids: string[]): Promise<EmailResult> {
+    return request<EmailResult>('/invoices/email', { method: 'POST', body: { ids } })
+  },
+
+  /** Void a single document (auditable soft delete, staff only). */
+  remove(id: string): Promise<void> {
+    return request<void>(`/invoices/${id}`, { method: 'DELETE' })
+  },
+
+  /** Void several documents at once (staff only). */
+  removeMany(ids: string[]): Promise<void> {
+    return request<void>(`/invoices${qs({ ids: ids.join(',') })}`, { method: 'DELETE' })
   },
 }

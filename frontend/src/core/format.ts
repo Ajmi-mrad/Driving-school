@@ -81,10 +81,23 @@ export function formatMonthYear(date: Date): string {
   }).format(date)
 }
 
-export function fullName(p: { firstName: string; lastName: string }): string {
-  return `${p.firstName} ${p.lastName}`.trim()
+interface NameParts {
+  firstName: string
+  lastName: string
+  username?: string
+  email?: string
 }
 
-export function initials(p: { firstName: string; lastName: string }): string {
-  return `${p.firstName.charAt(0)}${p.lastName.charAt(0)}`.toUpperCase()
+/** Full name, falling back to username / email when names are unset. */
+export function fullName(p: NameParts): string {
+  const name = `${p.firstName} ${p.lastName}`.trim()
+  return name || p.username || p.email || ''
+}
+
+/** Up to two uppercase initials, falling back to username / email. */
+export function initials(p: NameParts): string {
+  const fromName = `${p.firstName.charAt(0)}${p.lastName.charAt(0)}`.trim()
+  if (fromName) return fromName.toUpperCase()
+  const fallback = p.username || p.email || ''
+  return fallback.slice(0, 2).toUpperCase()
 }
