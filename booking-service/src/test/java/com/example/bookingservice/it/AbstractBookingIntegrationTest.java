@@ -2,7 +2,6 @@ package com.example.bookingservice.it;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -14,8 +13,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -37,22 +34,19 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @ActiveProfiles("it")
-@Testcontainers
 abstract class AbstractBookingIntegrationTest {
 
-    @Container
+    // Singleton containers: started once per JVM and shared by every subclass. Spring caches one
+    // context for all of them, so a per-class @Container/@AfterAll stop would leave that cached
+    // context pointing at a stopped Postgres/WireMock (Connection refused in the next class).
     @org.springframework.boot.testcontainers.service.connection.ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     static final WireMockServer WIREMOCK = new WireMockServer(options().dynamicPort());
 
     static {
+        POSTGRES.start();
         WIREMOCK.start();
-    }
-
-    @AfterAll
-    static void stopWireMock() {
-        WIREMOCK.stop();
     }
 
     @DynamicPropertySource
