@@ -34,6 +34,12 @@ receivers:
       - type: move
         from: attributes.container_id
         to: resource["container.id"]
+      # Container name, from the `tag: "{{.Name}}"` log option set in every docker-compose.yml.
+      # Loki turns service.name into the service_name label (untagged containers stay unknown_service).
+      - type: move
+        if: 'attributes.attrs?.tag != nil'
+        from: attributes.attrs.tag
+        to: resource["service.name"]
 
 processors:
   batch: {}

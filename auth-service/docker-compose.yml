@@ -1,6 +1,12 @@
+# Tag json-file avec le nom du conteneur : le collecteur OTel en fait le label Loki service_name.
+x-logging: &logging
+  options:
+    tag: "{{.Name}}"
+
 services:
   # ---- PostgreSQL dédié à Keycloak ----
   kc-postgres:
+    logging: *logging
     image: postgres:16-alpine
     container_name: kc-postgres
     environment:
@@ -19,6 +25,7 @@ services:
 
   # ---- PostgreSQL dédié à l'auth-service ----
   auth-postgres:
+    logging: *logging
     image: postgres:16-alpine
     container_name: auth-postgres
     environment:
@@ -39,6 +46,7 @@ services:
 
   # ---- Keycloak (Identity Provider) ----
   keycloak:
+    logging: *logging
     image: quay.io/keycloak/keycloak:26.6.3
     container_name: keycloak
     command: ["start-dev", "--import-realm"]
@@ -77,6 +85,7 @@ services:
 
   # ---- auth-service (User Service) ----
   auth-service:
+    logging: *logging
     build: .
     container_name: auth-service
     environment:
@@ -116,6 +125,7 @@ services:
 
   # ---- Mailpit : SMTP de dev + boîte de réception web (capture les emails envoyés par Keycloak) ----
   mailpit:
+    logging: *logging
     image: axllent/mailpit:latest
     container_name: mailpit
     ports:
@@ -127,6 +137,7 @@ services:
   # ---- discovery-service (Eureka) : registre des microservices ----
   # Vérifier l'enregistrement de AUTH-SERVICE / VEHICLE-SERVICE / API-GATEWAY sur http://localhost:8761.
   discovery-service:
+    logging: *logging
     build: ../discovery-service
     container_name: discovery-service
     environment:
@@ -146,6 +157,7 @@ services:
   # ---- api-gateway (Spring Cloud Gateway) : point d'entrée unique des API ----
   # Route /api/** vers les microservices via Eureka (lb://), valide la signature du JWT Keycloak.
   api-gateway:
+    logging: *logging
     build: ../api-gateway
     container_name: api-gateway
     environment:

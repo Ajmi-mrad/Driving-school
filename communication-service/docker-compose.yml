@@ -1,6 +1,12 @@
+# Tag json-file avec le nom du conteneur : le collecteur OTel en fait le label Loki service_name.
+x-logging: &logging
+  options:
+    tag: "{{.Name}}"
+
 services:
   # PostgreSQL dédié au communication-service.
   communication-postgres:
+    logging: *logging
     image: postgres:16-alpine
     container_name: communication-postgres
     environment:
@@ -20,6 +26,7 @@ services:
       - auto-ecole
 
   communication-service:
+    logging: *logging
     build: .
     container_name: communication-service
     environment:

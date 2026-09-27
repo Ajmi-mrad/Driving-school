@@ -19,8 +19,14 @@
 # ============================================================================
 name: driving-school-observability
 
+# Tag json-file avec le nom du conteneur : le collecteur OTel en fait le label Loki service_name.
+x-logging: &logging
+  options:
+    tag: "{{.Name}}"
+
 services:
   prometheus:
+    logging: *logging
     image: prom/prometheus:v2.54.1
     container_name: prometheus
     command:
@@ -34,6 +40,7 @@ services:
     restart: unless-stopped
 
   alertmanager:
+    logging: *logging
     image: prom/alertmanager:v0.27.0
     container_name: alertmanager
     command:
@@ -45,6 +52,7 @@ services:
     restart: unless-stopped
 
   grafana:
+    logging: *logging
     image: grafana/grafana:11.2.0
     container_name: grafana
     environment:
@@ -62,6 +70,7 @@ services:
     restart: unless-stopped
 
   otel-collector:
+    logging: *logging
     image: otel/opentelemetry-collector-contrib:0.109.0
     container_name: otel-collector
     # root so the filelog receiver can read /var/lib/docker/containers/*.log
@@ -79,6 +88,7 @@ services:
     restart: unless-stopped
 
   jaeger:
+    logging: *logging
     image: jaegertracing/all-in-one:1.60
     container_name: jaeger
     environment:
@@ -88,6 +98,7 @@ services:
     restart: unless-stopped
 
   loki:
+    logging: *logging
     image: grafana/loki:3.1.1
     container_name: loki
     command: ["-config.file=/etc/loki/loki-config.yaml"]
@@ -99,6 +110,7 @@ services:
     restart: unless-stopped
 
   node-exporter:
+    logging: *logging
     image: prom/node-exporter:v1.8.2
     container_name: node-exporter
     pid: host
@@ -111,6 +123,7 @@ services:
     restart: unless-stopped
 
   cadvisor:
+    logging: *logging
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: cadvisor
     privileged: true
