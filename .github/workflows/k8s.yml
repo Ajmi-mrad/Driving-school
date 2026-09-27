@@ -1,0 +1,45 @@
+name: k8s
+
+on:
+  pull_request:
+    paths:
+      - "k8s/**"
+      - "auth-service/realm-export.json"
+      - ".github/workflows/k8s.yml"
+  push:
+    branches: [main]
+    paths:
+      - "k8s/**"
+      - "auth-service/realm-export.json"
+      - ".github/workflows/k8s.yml"
+
+concurrency:
+  group: k8s-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CHART: k8s/helm/driving-school
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      # The chart embeds the realm; the copy under files/ is gitignored (same as deploy.yml).
+      - name: Sync realm into chart
+        run: cp auth-service/realm-export.json "$CHART/files/realm-export.json"
+
+      - name: Lint
+        run: |
+          helm lint "$CHART"
+          helm lint "$CHART" -f "$CHART/values-local.yaml"
+
+      - name: Render templates
+        run: |
+          helm template driving-school "$CHART" > /dev/null
+          helm template driving-school "$CHART" -f "$CHART/values-local.yaml" > /dev/null
