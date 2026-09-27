@@ -10,6 +10,8 @@ global:
   imageRepoPrefix: ajmimrad/driving-school
   imageTag: latest
   imagePullPolicy: Always
+  # No OTel collector in this chart: tracing on would log "Failed to export spans" nonstop.
+  tracingEnabled: false
 
 realm: auto-ecole
 

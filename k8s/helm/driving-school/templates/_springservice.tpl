@@ -55,6 +55,8 @@ spec:
           env:
             - name: SERVER_PORT
               value: {{ $svc.port | quote }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: {{ $root.Values.global.tracingEnabled | toString | quote }}
             {{- if $svc.jwks }}
             - name: KEYCLOAK_JWKS_URI
               value: {{ printf "%s/realms/%s/protocol/openid-connect/certs" $root.Values.keycloak.internalUrl $root.Values.realm | quote }}
