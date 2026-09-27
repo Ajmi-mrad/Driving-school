@@ -46,6 +46,8 @@ class EnrollmentServiceTest {
     private UserClient userClient;
     @Mock
     private FinanceMapper mapper;
+    @Mock
+    private AuditService auditService;
 
     @InjectMocks
     private EnrollmentService service;
