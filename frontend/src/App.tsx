@@ -7,6 +7,8 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { VehiclesPage } from '@/pages/VehiclesPage'
 import { SessionsPage } from '@/pages/SessionsPage'
+import { AvailabilityPage } from '@/pages/AvailabilityPage'
+import { ExamsPage } from '@/pages/ExamsPage'
 import { ForfaitsPage } from '@/pages/ForfaitsPage'
 import { EnrollmentsPage } from '@/pages/EnrollmentsPage'
 import { PaymentsPage } from '@/pages/PaymentsPage'
@@ -15,6 +17,8 @@ import { MessagesPage } from '@/pages/MessagesPage'
 import { NotificationsPage } from '@/pages/NotificationsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { AuditPage } from '@/pages/AuditPage'
+import { AdminDataPage } from '@/pages/AdminDataPage'
+import { OpsPage } from '@/pages/OpsPage'
 import { hasAnyRole, isOwner, isStaff, permissions } from '@/core/auth/roles'
 
 function App() {
@@ -41,6 +45,14 @@ function App() {
           </Route>
 
           <Route path="/sessions" element={<SessionsPage />} />
+          <Route
+            element={
+              <RequireRole allow={(r) => hasAnyRole(r, 'OWNER', 'SECRETARY', 'MONITOR')} />
+            }
+          >
+            <Route path="/availability" element={<AvailabilityPage />} />
+          </Route>
+          <Route path="/exams" element={<ExamsPage />} />
           <Route path="/forfaits" element={<ForfaitsPage />} />
 
           <Route
@@ -61,6 +73,8 @@ function App() {
           </Route>
           <Route element={<RequireRole allow={isOwner} />}>
             <Route path="/audit" element={<AuditPage />} />
+            <Route path="/admin/data" element={<AdminDataPage />} />
+            <Route path="/ops" element={<OpsPage />} />
           </Route>
         </Route>
 

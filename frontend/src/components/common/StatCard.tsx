@@ -23,14 +23,14 @@ export function StatCard({
   }[tone]
 
   return (
-    <Card>
+    <Card className="transition-shadow hover:shadow-md">
       <CardContent className="flex items-center gap-4 p-5">
-        <div className={cn('flex size-11 items-center justify-center rounded-lg', toneClass)}>
-          <Icon className="size-5" />
+        <div className={cn('flex size-12 shrink-0 items-center justify-center rounded-xl', toneClass)}>
+          <Icon className="size-6" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-semibold tracking-tight">{value}</p>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
           {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
         </div>
       </CardContent>

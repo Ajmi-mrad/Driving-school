@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { ThemeProvider } from 'next-themes'
 import './index.css'
 import './i18n'
 import App from './App.tsx'
@@ -13,12 +14,19 @@ const authClient = createKeycloakAuth()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider authClient={authClient}>
-      <TooltipProvider>
-        <DirectionManager />
-        <App />
-        <Toaster richColors position="top-right" />
-      </TooltipProvider>
-    </AuthProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <AuthProvider authClient={authClient}>
+        <TooltipProvider>
+          <DirectionManager />
+          <App />
+          <Toaster richColors position="top-right" />
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

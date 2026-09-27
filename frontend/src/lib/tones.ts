@@ -1,5 +1,6 @@
 import type {
   EnrollmentStatus,
+  ExamStatus,
   SessionStatus,
   VehicleStatus,
 } from '@/core/types'
@@ -24,5 +25,13 @@ export const SESSION_STATUS_TONE: Record<SessionStatus, Tone> = {
 export const ENROLLMENT_STATUS_TONE: Record<EnrollmentStatus, Tone> = {
   ACTIVE: 'info',
   COMPLETED: 'success',
+  CANCELLED: 'neutral',
+}
+
+export const EXAM_STATUS_TONE: Record<ExamStatus, Tone> = {
+  SCHEDULED: 'info',
+  PASSED: 'success',
+  FAILED: 'danger',
+  NO_SHOW: 'warning',
   CANCELLED: 'neutral',
 }

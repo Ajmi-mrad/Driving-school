@@ -58,15 +58,24 @@ export function MessagesPage() {
   )
   const onlineSet = useMemo(() => new Set(presence ?? []), [presence])
 
+  const [msgSize, setMsgSize] = useState(50)
+  // Reset the loaded window when switching conversations.
+  useEffect(() => setMsgSize(50), [selectedId])
   const { data: page, loading: loadingMsgs, reload: reloadMsgs, refresh: refreshMsgs } = useAsync(
     () =>
       selectedId
-        ? conversationsApi.messages(selectedId, 0, 50)
+        ? conversationsApi.messages(selectedId, 0, msgSize)
         : Promise.resolve(null),
-    [selectedId],
+    [selectedId, msgSize],
   )
   useRevalidateOnFocus(refreshMsgs)
-  const messages = page?.content ?? []
+  // The API returns messages newest-first (sentAt DESC) for pagination; a chat
+  // thread reads oldest-first, top to bottom.
+  const messages = useMemo(
+    () => [...(page?.content ?? [])].reverse(),
+    [page],
+  )
+  const hasOlder = (page?.totalElements ?? 0) > messages.length
 
   // Mark read when opening a conversation.
   useEffect(() => {
@@ -76,9 +85,12 @@ export function MessagesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId])
 
+  // Scroll to the bottom on open and when a new message lands at the end — but
+  // NOT when older history is prepended (the newest id stays the same).
+  const newestId = messages[messages.length - 1]?.id
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages.length])
+  }, [selectedId, newestId])
 
   const selected = conversations?.find((c) => c.id === selectedId) ?? null
 
@@ -222,6 +234,17 @@ export function MessagesPage() {
               </div>
 
               <div className="flex-1 space-y-2 overflow-y-auto p-4">
+                {hasOlder && !loadingMsgs && (
+                  <div className="flex justify-center pb-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMsgSize((s) => s + 50)}
+                    >
+                      {t('messages.loadOlder')}
+                    </Button>
+                  </div>
+                )}
                 {loadingMsgs ? (
                   <Skeleton className="h-16 w-2/3" />
                 ) : messages.length === 0 ? (

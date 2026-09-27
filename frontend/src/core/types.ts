@@ -124,6 +124,73 @@ export interface BookingSettings {
 }
 
 // ---------------------------------------------------------------------------
+// Monitor availability (booking-service)
+// ---------------------------------------------------------------------------
+export const DAYS_OF_WEEK = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+] as const
+export type DayOfWeek = (typeof DAYS_OF_WEEK)[number]
+
+/** A recurring weekly working window; times are local wall-clock "HH:MM[:SS]". */
+export interface AvailabilityRule {
+  dayOfWeek: DayOfWeek
+  startTime: string
+  endTime: string
+}
+
+/** A one-off absence interval (ISO datetimes). */
+export interface TimeOff {
+  id: string
+  startTime: string
+  endTime: string
+  reason?: string | null
+}
+
+/** A computed bookable slot (ISO datetimes). */
+export interface FreeSlot {
+  startTime: string
+  endTime: string
+}
+
+// ---------------------------------------------------------------------------
+// Exams (booking-service)
+// ---------------------------------------------------------------------------
+export const EXAM_TYPES = ['CODE', 'DRIVING'] as const
+export type ExamType = (typeof EXAM_TYPES)[number]
+
+export const EXAM_STATUSES = [
+  'SCHEDULED',
+  'PASSED',
+  'FAILED',
+  'NO_SHOW',
+  'CANCELLED',
+] as const
+export type ExamStatus = (typeof EXAM_STATUSES)[number]
+
+/** Terminal statuses a staff/monitor can record on a SCHEDULED exam. */
+export const EXAM_OUTCOMES = ['PASSED', 'FAILED', 'NO_SHOW'] as const
+export type ExamOutcome = (typeof EXAM_OUTCOMES)[number]
+
+export interface Exam {
+  id: string
+  type: ExamType
+  clientId: string
+  monitorId?: string | null
+  vehicleId?: string | null
+  scheduledAt: string // ISO datetime
+  location?: string | null
+  status: ExamStatus
+  attemptNumber: number
+  resultNote?: string | null
+}
+
+// ---------------------------------------------------------------------------
 // Finance (finance-service)
 // ---------------------------------------------------------------------------
 export interface Forfait {
@@ -199,7 +266,20 @@ export interface Message {
   readAt?: string | null
 }
 
-export const NOTIFICATION_TYPES = ['NEW_MESSAGE', 'PAYMENT_DUE'] as const
+export const NOTIFICATION_TYPES = [
+  'NEW_MESSAGE',
+  'PAYMENT_DUE',
+  'SESSION_REQUESTED',
+  'SESSION_CONFIRMED',
+  'SESSION_REFUSED',
+  'SESSION_RESCHEDULED',
+  'SESSION_CANCELLED',
+  'EXAM_SCHEDULED',
+  'EXAM_PASSED',
+  'EXAM_FAILED',
+  'EXAM_RESCHEDULED',
+  'EXAM_CANCELLED',
+] as const
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
 
 export interface Notification {

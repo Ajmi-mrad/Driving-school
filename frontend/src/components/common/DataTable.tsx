@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -8,6 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from '@/components/ui/pagination'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +34,7 @@ export function DataTable<T extends { id: string }>({
   selectable,
   selectedIds,
   onSelectionChange,
+  pageSize = 10,
 }: {
   columns: Column<T>[]
   rows: T[]
@@ -37,10 +45,23 @@ export function DataTable<T extends { id: string }>({
   selectable?: boolean
   selectedIds?: Set<string>
   onSelectionChange?: (ids: Set<string>) => void
+  /** Rows per page for client-side pagination. `0` disables paging. */
+  pageSize?: number
 }) {
   const { t } = useTranslation()
   const selected = selectedIds ?? new Set<string>()
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id))
+
+  // Client-side pagination. Selection/select-all stay scoped to the full
+  // `rows` set (bulk actions act on everything); only the body is sliced.
+  const [page, setPage] = useState(0)
+  const paginated = pageSize > 0
+  const pageCount = paginated ? Math.ceil(rows.length / pageSize) : 1
+  // Reset to the first page whenever the (filtered) result set changes size.
+  useEffect(() => setPage(0), [rows.length])
+  const visibleRows = paginated
+    ? rows.slice(page * pageSize, page * pageSize + pageSize)
+    : rows
 
   const toggleAll = () => {
     if (!onSelectionChange) return
@@ -57,6 +78,7 @@ export function DataTable<T extends { id: string }>({
   const colCount = columns.length + (selectable ? 1 : 0)
 
   return (
+    <div className="space-y-3">
     <div className="rounded-xl border bg-card">
       <Table>
         <TableHeader>
@@ -100,7 +122,7 @@ export function DataTable<T extends { id: string }>({
               </TableCell>
             </TableRow>
           ) : (
-            rows.map((row) => (
+            visibleRows.map((row) => (
               <TableRow
                 key={row.id}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -130,6 +152,46 @@ export function DataTable<T extends { id: string }>({
           )}
         </TableBody>
       </Table>
+    </div>
+
+    {!loading && pageCount > 1 && (
+      <Pagination className="justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationLink
+              size="default"
+              aria-label={t('common.previous')}
+              aria-disabled={page === 0}
+              className={cn('cursor-pointer gap-1', page === 0 && 'pointer-events-none opacity-50')}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              <ChevronLeft className="size-4 rtl:rotate-180" />
+              <span className="hidden sm:block">{t('common.previous')}</span>
+            </PaginationLink>
+          </PaginationItem>
+          <PaginationItem>
+            <span className="px-3 text-sm text-muted-foreground">
+              {t('common.pageOf', { page: page + 1, total: pageCount })}
+            </span>
+          </PaginationItem>
+          <PaginationItem>
+            <PaginationLink
+              size="default"
+              aria-label={t('common.next')}
+              aria-disabled={page >= pageCount - 1}
+              className={cn(
+                'cursor-pointer gap-1',
+                page >= pageCount - 1 && 'pointer-events-none opacity-50',
+              )}
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            >
+              <span className="hidden sm:block">{t('common.next')}</span>
+              <ChevronRight className="size-4 rtl:rotate-180" />
+            </PaginationLink>
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    )}
     </div>
   )
 }
