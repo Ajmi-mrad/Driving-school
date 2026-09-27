@@ -109,6 +109,17 @@ public class UserController {
         return userService.listContacts(rolesOf(auth));
     }
 
+    /**
+     * Identifiants Keycloak du staff actif (propriétaires + secrétaires). Endpoint interne : appelé
+     * par le booking-service (jeton {@code SERVICE}) pour destiner au staff les notifications de
+     * demande de séance. Surcharge la règle staff-only pour autoriser le rôle {@code SERVICE}.
+     */
+    @GetMapping("/staff-ids")
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY','SERVICE')")
+    public List<String> staffIds() {
+        return userService.listStaffKeycloakIds();
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('OWNER') or "
             + "(hasRole('SECRETARY') and (#request.roles() == null or "

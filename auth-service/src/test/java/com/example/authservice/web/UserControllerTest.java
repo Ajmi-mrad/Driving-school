@@ -5,6 +5,7 @@ import com.example.authservice.domain.Role;
 import com.example.authservice.exception.DuplicateUserException;
 import com.example.authservice.exception.KeycloakOperationException;
 import com.example.authservice.exception.UserNotFoundException;
+import com.example.authservice.repository.AuditEventRepository;
 import com.example.authservice.service.UserService;
 import com.example.authservice.web.dto.CreateUserRequest;
 import com.example.authservice.web.dto.UserResponse;
@@ -29,6 +30,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -48,9 +50,13 @@ class UserControllerTest {
     @MockitoBean
     UserService userService;
 
+    @MockitoBean
+    AuditEventRepository auditEventRepository;
+
     private static final SimpleGrantedAuthority OWNER = new SimpleGrantedAuthority("ROLE_OWNER");
     private static final SimpleGrantedAuthority SECRETARY = new SimpleGrantedAuthority("ROLE_SECRETARY");
     private static final SimpleGrantedAuthority CLIENT = new SimpleGrantedAuthority("ROLE_CLIENT");
+    private static final SimpleGrantedAuthority SERVICE = new SimpleGrantedAuthority("ROLE_SERVICE");
 
     private UserResponse sample() {
         return new UserResponse(UUID.randomUUID(), "kc-1", "jdoe", "j@example.com", "John", "Doe",
@@ -96,6 +102,28 @@ class UserControllerTest {
     @Test
     void client_cannotListUsers_returns403() throws Exception {
         mockMvc.perform(get("/api/users").with(jwt().authorities(CLIENT)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void staffIds_asService_returns200_withIds() throws Exception {
+        given(userService.listStaffKeycloakIds()).willReturn(java.util.List.of("owner-1", "secretary-1"));
+        mockMvc.perform(get("/api/users/staff-ids").with(jwt().authorities(SERVICE)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("owner-1"))
+                .andExpect(jsonPath("$[1]").value("secretary-1"));
+    }
+
+    @Test
+    void staffIds_asOwner_returns200() throws Exception {
+        given(userService.listStaffKeycloakIds()).willReturn(java.util.List.of());
+        mockMvc.perform(get("/api/users/staff-ids").with(jwt().authorities(OWNER)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void staffIds_asClient_returns403() throws Exception {
+        mockMvc.perform(get("/api/users/staff-ids").with(jwt().authorities(CLIENT)))
                 .andExpect(status().isForbidden());
     }
 
