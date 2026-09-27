@@ -55,6 +55,10 @@ secrets:
   AUTH_SERVICE_CLIENT_SECRET: KAy4oDfhP3EwmMGluIeVmFC8NgS7bE1I
   FINANCE_SERVICE_CLIENT_SECRET: financeServiceSecretChangeMe
   BOOKING_SERVICE_CLIENT_SECRET: "bookingServiceSecretChangeMe"
+  # ai-service (only used when services.ai-service.enabled). Groq is required, the rest optional.
+  GROQ_API_KEY: ""
+  GEMINI_API_KEY: ""
+  GITHUB_TOKEN: ""
 
 # Databases created inside the shared Postgres by its init script.
 # passwordKey references a key in the Secret above.
@@ -74,6 +78,8 @@ databases:
 #   eurekaClient : registers with Eureka + prefer-ip-address (K8s-safe)
 #   jwks         : inject KEYCLOAK_JWKS_URI (resource server)
 #   waitForPostgres : add an init-container that blocks until Postgres is up
+#   enabled      : set to false to skip a service (default: rendered)
+# Dev tools (/api/admin/**) stay off: APP_DEV_TOOLS_ENABLED is never set here.
 # ---------------------------------------------------------------------------
 services:
   discovery-service:
@@ -140,6 +146,7 @@ services:
       AUTH_SERVICE_URL: http://auth-service
       VEHICLE_SERVICE_URL: http://vehicle-service
       FINANCE_SERVICE_URL: http://finance-service
+      COMMUNICATION_SERVICE_URL: http://communication-service
     secretEnv:
       BOOKING_DB_PASSWORD: BOOKING_DB_PASSWORD
       KEYCLOAK_BOOKING_SERVICE_SECRET: BOOKING_SERVICE_CLIENT_SECRET
@@ -177,3 +184,18 @@ services:
     secretEnv:
       FINANCE_DB_PASSWORD: FINANCE_DB_PASSWORD
       KEYCLOAK_FINANCE_SERVICE_SECRET: FINANCE_SERVICE_CLIENT_SECRET
+
+  # Read-only Ops assistant (optional). Needs GROQ_API_KEY in the Secret.
+  # No mcp-grafana in this chart: Prometheus/Loki tools report "unavailable".
+  ai-service:
+    enabled: false
+    port: 8086
+    replicas: 1
+    eurekaClient: true
+    jwks: true
+    waitForPostgres: false
+    env: {}
+    secretEnv:
+      GROQ_API_KEY: GROQ_API_KEY
+      GEMINI_API_KEY: GEMINI_API_KEY
+      GITHUB_TOKEN: GITHUB_TOKEN
