@@ -27,6 +27,7 @@
 		<url/>
 	</scm>
 	<properties>
+		<git.commit>local</git.commit>
 		<java.version>17</java.version>
 		<spring-cloud.version>2025.0.3</spring-cloud.version>
 	</properties>
@@ -91,6 +92,19 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<!-- build-info : /actuator/info expose la version déployée (lue par l'assistant Ops). -->
+				<executions>
+					<execution>
+						<goals>
+							<goal>build-info</goal>
+						</goals>
+						<configuration>
+							<additionalProperties>
+								<commit>${git.commit}</commit>
+							</additionalProperties>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 			<!-- Static analysis: report-only (never fails the build); run in CI. -->
 			<plugin>
