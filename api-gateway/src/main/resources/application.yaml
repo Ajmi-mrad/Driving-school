@@ -36,6 +36,11 @@ spring:
               uri: lb://communication-service
               predicates:
                 - Path=/api/conversations/**,/api/notifications/**,/api/admin/communication/**
+            # Assistant Ops IA : réponses en Server-Sent Events (flux relayé tel quel).
+            - id: ai-service
+              uri: lb://ai-service
+              predicates:
+                - Path=/api/ai/**
             # Route du handshake WebSocket/STOMP : la Gateway relaie l'« Upgrade » automatiquement
             # une fois le chemin routé vers le service (lb:// résolu via Eureka).
             - id: communication-service-ws
