@@ -42,6 +42,7 @@ booking:
     auth-service-url: ${AUTH_SERVICE_URL:http://auth-service}
     vehicle-service-url: ${VEHICLE_SERVICE_URL:http://vehicle-service}
     finance-service-url: ${FINANCE_SERVICE_URL:http://finance-service}
+    communication-service-url: ${COMMUNICATION_SERVICE_URL:http://communication-service}
 
 eureka:
   client:

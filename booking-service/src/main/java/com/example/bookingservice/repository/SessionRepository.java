@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 public interface SessionRepository
@@ -57,6 +58,23 @@ public interface SessionRepository
                              @Param("start") Instant start,
                              @Param("end") Instant end,
                              @Param("excludeId") UUID excludeId);
+
+    /**
+     * Séances d'un moniteur (dans les statuts donnés) qui chevauchent l'intervalle {@code [start, end)} :
+     * {@code s.startTime < :end ET s.endTime > :start}. Contrairement à {@link #monitorHasOverlap}, renvoie
+     * les séances elles-mêmes pour les retrancher des créneaux réservables lors du calcul de disponibilité.
+     */
+    @Query("""
+            select s from Session s
+            where s.monitorId = :monitorId
+              and s.status in :statuses
+              and s.startTime < :end and s.endTime > :start
+            order by s.startTime asc
+            """)
+    List<Session> findMonitorSessionsInRange(@Param("monitorId") String monitorId,
+                                             @Param("statuses") Collection<SessionStatus> statuses,
+                                             @Param("start") Instant start,
+                                             @Param("end") Instant end);
 
     // Recherche filtrée : voir SessionSpecifications#filter (findAll(Specification, Sort)).
     // Les prédicats nuls sont omis pour éviter l'ambiguïté de type Postgres sur « :param is null ».

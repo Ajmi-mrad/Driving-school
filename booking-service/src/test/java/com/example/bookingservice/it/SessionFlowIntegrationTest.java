@@ -13,6 +13,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,6 +85,86 @@ class SessionFlowIntegrationTest extends AbstractBookingIntegrationTest {
         mockMvc.perform(post("/api/sessions").with(staff(STAFF_SUB))
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void createPendingSession_notifiesMonitorAndStaff() throws Exception {
+        stubUser(CLIENT_SUB, "CLIENT", true);
+        stubUser(MONITOR_SUB, "MONITOR", true);
+        stubAvailableVehicles(UUID.randomUUID().toString());
+        stubStaffIds(STAFF_SUB); // one active staff member -> one staff recipient
+
+        Instant start = Instant.now().plus(2, ChronoUnit.DAYS);
+        Instant end = start.plus(60, ChronoUnit.MINUTES);
+        String body = """
+                {"type":"DRIVING","clientId":"%s","monitorId":"%s","startTime":"%s","endTime":"%s"}
+                """.formatted(CLIENT_SUB, MONITOR_SUB, start, end);
+
+        mockMvc.perform(post("/api/sessions").with(staff(STAFF_SUB))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+
+        // Notifications fire after commit: the staff directory is resolved, then a SESSION_REQUESTED
+        // notification is posted to the assigned monitor and to each staff member (monitor + owner = 2).
+        WIREMOCK.verify(getRequestedFor(urlPathEqualTo("/api/users/staff-ids")));
+        WIREMOCK.verify(2, postRequestedFor(urlPathEqualTo("/api/notifications/booking"))
+                .withRequestBody(matchingJsonPath("$.type", equalTo("SESSION_REQUESTED"))));
+        WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/api/notifications/booking"))
+                .withRequestBody(matchingJsonPath("$.recipientId", equalTo(MONITOR_SUB))));
+        WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/api/notifications/booking"))
+                .withRequestBody(matchingJsonPath("$.recipientId", equalTo(STAFF_SUB))));
+    }
+
+    @Test
+    void confirmSession_notifiesClient() throws Exception {
+        Instant start = Instant.now().plus(2, ChronoUnit.DAYS);
+        Instant end = start.plus(60, ChronoUnit.MINUTES);
+        Session session = persistSession(SessionStatus.PENDING, CLIENT_SUB, MONITOR_SUB, start, end,
+                UUID.randomUUID());
+
+        mockMvc.perform(patch("/api/sessions/{id}/confirm", session.getId()).with(staff(STAFF_SUB))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"comment\":\"Créneau validé\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+
+        // The student is notified of the confirmation (best-effort, after commit).
+        WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/api/notifications/booking"))
+                .withRequestBody(matchingJsonPath("$.type", equalTo("SESSION_CONFIRMED")))
+                .withRequestBody(matchingJsonPath("$.recipientId", equalTo(CLIENT_SUB))));
+    }
+
+    @Test
+    void refuseSession_notifiesClient() throws Exception {
+        Instant start = Instant.now().plus(2, ChronoUnit.DAYS);
+        Instant end = start.plus(60, ChronoUnit.MINUTES);
+        Session session = persistSession(SessionStatus.PENDING, CLIENT_SUB, MONITOR_SUB, start, end,
+                UUID.randomUUID());
+
+        mockMvc.perform(patch("/api/sessions/{id}/refuse", session.getId()).with(staff(STAFF_SUB))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"comment\":\"Aucun véhicule\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REFUSED"));
+
+        WIREMOCK.verify(postRequestedFor(urlPathEqualTo("/api/notifications/booking"))
+                .withRequestBody(matchingJsonPath("$.type", equalTo("SESSION_REFUSED")))
+                .withRequestBody(matchingJsonPath("$.recipientId", equalTo(CLIENT_SUB))));
+    }
+
+    @Test
+    void clientCancellingOwnSession_doesNotNotify() throws Exception {
+        // Far enough ahead to satisfy the cancellation notice window.
+        Instant start = Instant.now().plus(10, ChronoUnit.DAYS);
+        Instant end = start.plus(60, ChronoUnit.MINUTES);
+        Session session = persistSession(SessionStatus.CONFIRMED, CLIENT_SUB, MONITOR_SUB, start, end,
+                UUID.randomUUID());
+
+        mockMvc.perform(patch("/api/sessions/{id}/cancel", session.getId()).with(client(CLIENT_SUB)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        // A client cancelling their own session is not notified back.
+        WIREMOCK.verify(0, postRequestedFor(urlPathEqualTo("/api/notifications/booking")));
     }
 
     @Test

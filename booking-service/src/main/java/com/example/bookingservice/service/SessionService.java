@@ -1,8 +1,10 @@
 package com.example.bookingservice.service;
 
+import com.example.bookingservice.client.CommunicationClient;
 import com.example.bookingservice.client.FinanceClient;
 import com.example.bookingservice.client.UserClient;
 import com.example.bookingservice.client.VehicleClient;
+import com.example.bookingservice.client.dto.NotificationRequest;
 import com.example.bookingservice.client.dto.UserInfo;
 import com.example.bookingservice.client.dto.VehicleInfo;
 import com.example.bookingservice.domain.BookingSettings;
@@ -13,6 +15,7 @@ import com.example.bookingservice.exception.BookingConflictException;
 import com.example.bookingservice.exception.CancellationTooLateException;
 import com.example.bookingservice.exception.CrossServiceValidationException;
 import com.example.bookingservice.exception.InvalidSessionStateException;
+import com.example.bookingservice.exception.MonitorUnavailableException;
 import com.example.bookingservice.exception.NoVehicleAvailableException;
 import com.example.bookingservice.exception.SessionNotFoundException;
 import com.example.bookingservice.mapper.SessionMapper;
@@ -31,8 +34,11 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -57,22 +63,33 @@ public class SessionService {
     private static final String ROLE_CLIENT = "CLIENT";
     private static final String ROLE_MONITOR = "MONITOR";
 
+    /** Fuseau d'affichage des dates dans le libellé des notifications (auto-école de Tunisie). */
+    private static final ZoneId DISPLAY_ZONE = ZoneId.of("Africa/Tunis");
+    private static final DateTimeFormatter WHEN_FMT =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH'h'mm", Locale.FRENCH).withZone(DISPLAY_ZONE);
+
     private final SessionRepository sessionRepository;
     private final SessionMapper sessionMapper;
     private final BookingSettingsService settingsService;
+    private final MonitorAvailabilityService availabilityService;
     private final UserClient userClient;
     private final VehicleClient vehicleClient;
     private final FinanceClient financeClient;
+    private final CommunicationClient communicationClient;
 
     public SessionService(SessionRepository sessionRepository, SessionMapper sessionMapper,
-                          BookingSettingsService settingsService, UserClient userClient,
-                          VehicleClient vehicleClient, FinanceClient financeClient) {
+                          BookingSettingsService settingsService,
+                          MonitorAvailabilityService availabilityService, UserClient userClient,
+                          VehicleClient vehicleClient, FinanceClient financeClient,
+                          CommunicationClient communicationClient) {
         this.sessionRepository = sessionRepository;
         this.sessionMapper = sessionMapper;
         this.settingsService = settingsService;
+        this.availabilityService = availabilityService;
         this.userClient = userClient;
         this.vehicleClient = vehicleClient;
         this.financeClient = financeClient;
+        this.communicationClient = communicationClient;
     }
 
     @Transactional
@@ -121,6 +138,7 @@ public class SessionService {
                 && sessionRepository.monitorHasOverlap(session.getMonitorId(), ACTIVE, req.startTime(), req.endTime(), null)) {
             throw new BookingConflictException("Le moniteur a déjà une séance sur ce créneau");
         }
+        ensureMonitorAvailable(session.getMonitorId(), req.startTime(), req.endTime());
 
         // 4) Véhicule : interdit pour le code ; explicite ou auto-affecté pour la conduite.
         if (req.type() == SessionType.CODE) {
@@ -139,6 +157,19 @@ public class SessionService {
         log.info("Séance créée id={} type={} status={} client={} monitor={} vehicle={}",
                 saved.getId(), saved.getType(), saved.getStatus(), saved.getClientId(),
                 saved.getMonitorId(), saved.getVehicleId());
+
+        // Notifications (best-effort, hors transaction) : auto-validée → confirmation à l'élève et
+        // au moniteur ; sinon → demande à valider adressée au moniteur et au staff.
+        String clientName = client.fullName();
+        boolean autoValidated = saved.getStatus() == SessionStatus.CONFIRMED;
+        runAfterCommit(() -> {
+            if (autoValidated) {
+                notifyClientConfirmed(saved, null);
+                notifyMonitorNewSession(saved, clientName);
+            } else {
+                notifyRequested(saved, clientName);
+            }
+        });
         return sessionMapper.toResponse(saved);
     }
 
@@ -197,9 +228,14 @@ public class SessionService {
         Session session = findOrThrow(id);
         requireStatus(session, SessionStatus.PENDING, "Seule une séance en attente peut être confirmée");
         ensureNoConflict(session);
+        // Refuser la confirmation si la disponibilité du moniteur a changé depuis la demande (absence
+        // ajoutée, horaires restreints) — sinon on figerait une séance CONFIRMED hors disponibilité.
+        ensureMonitorAvailable(session.getMonitorId(), session.getStartTime(), session.getEndTime());
         session.setStatus(SessionStatus.CONFIRMED);
         session.setDecisionNote(normalizeComment(comment));
-        return sessionMapper.toResponse(sessionRepository.save(session));
+        Session saved = sessionRepository.save(session);
+        runAfterCommit(() -> notifyClientConfirmed(saved, saved.getDecisionNote()));
+        return sessionMapper.toResponse(saved);
     }
 
     @Transactional
@@ -208,7 +244,9 @@ public class SessionService {
         requireStatus(session, SessionStatus.PENDING, "Seule une séance en attente peut être refusée");
         session.setStatus(SessionStatus.REFUSED);
         session.setDecisionNote(normalizeComment(comment));
-        return sessionMapper.toResponse(sessionRepository.save(session));
+        Session saved = sessionRepository.save(session);
+        runAfterCommit(() -> notifyClientRefused(saved, saved.getDecisionNote()));
+        return sessionMapper.toResponse(saved);
     }
 
     /** Normalise une note de décision : {@code null} si vide/blanche. */
@@ -234,7 +272,13 @@ public class SessionService {
                     "Annulation impossible : le préavis de " + noticeHours + "h est dépassé");
         }
         session.setStatus(SessionStatus.CANCELLED);
-        return sessionMapper.toResponse(sessionRepository.save(session));
+        Session saved = sessionRepository.save(session);
+        // Prévenir l'élève uniquement lorsque l'annulation vient de l'auto-école (staff),
+        // pas lorsqu'il annule lui-même.
+        if (staff) {
+            runAfterCommit(() -> notifyClientCancelled(saved));
+        }
+        return sessionMapper.toResponse(saved);
     }
 
     @Transactional
@@ -251,7 +295,13 @@ public class SessionService {
         session.setStartTime(req.startTime());
         session.setEndTime(req.endTime());
         ensureNoConflict(session);
-        return sessionMapper.toResponse(sessionRepository.save(session));
+        ensureMonitorAvailable(session.getMonitorId(), req.startTime(), req.endTime());
+        Session saved = sessionRepository.save(session);
+        // Prévenir l'élève uniquement lorsque le report vient de l'auto-école (staff).
+        if (staff) {
+            runAfterCommit(() -> notifyClientRescheduled(saved));
+        }
+        return sessionMapper.toResponse(saved);
     }
 
     /**
@@ -294,12 +344,94 @@ public class SessionService {
         }
     }
 
+    // ---- notifications (best-effort, invoquées après commit) ----
+
+    /** Demande de séance en attente : adressée au moniteur concerné et à tout le staff. */
+    private void notifyRequested(Session session, String clientName) {
+        String title = "Nouvelle demande de séance";
+        String body = "Demande de séance de " + typeLabel(session.getType()) + " le " + when(session)
+                + (clientName == null ? "" : " par " + clientName) + ".";
+        notify(session.getMonitorId(), "SESSION_REQUESTED", title, body, session);
+        for (String staffId : userClient.listStaffIds()) {
+            // Éviter un doublon si un membre du staff est aussi le moniteur assigné.
+            if (!staffId.equals(session.getMonitorId())) {
+                notify(staffId, "SESSION_REQUESTED", title, body, session);
+            }
+        }
+    }
+
+    /** Séance confirmée (validation manuelle ou auto-validation) : adressée à l'élève. */
+    private void notifyClientConfirmed(Session session, String note) {
+        String body = "Votre séance de " + typeLabel(session.getType()) + " du " + when(session)
+                + " a été confirmée." + noteSuffix(note);
+        notify(session.getClientId(), "SESSION_CONFIRMED", "Séance confirmée", body, session);
+    }
+
+    /** Nouvelle séance auto-validée : informe le moniteur assigné qu'une séance lui est affectée. */
+    private void notifyMonitorNewSession(Session session, String clientName) {
+        String body = "Nouvelle séance de " + typeLabel(session.getType()) + " le " + when(session)
+                + (clientName == null ? "" : " avec " + clientName) + ".";
+        notify(session.getMonitorId(), "SESSION_CONFIRMED", "Nouvelle séance", body, session);
+    }
+
+    /** Séance refusée : adressée à l'élève, avec le motif éventuel. */
+    private void notifyClientRefused(Session session, String note) {
+        String body = "Votre séance de " + typeLabel(session.getType()) + " du " + when(session)
+                + " a été refusée." + noteSuffix(note);
+        notify(session.getClientId(), "SESSION_REFUSED", "Séance refusée", body, session);
+    }
+
+    /** Séance reportée par le staff : adressée à l'élève. */
+    private void notifyClientRescheduled(Session session) {
+        String body = "Votre séance de " + typeLabel(session.getType()) + " a été reportée au "
+                + when(session) + ".";
+        notify(session.getClientId(), "SESSION_RESCHEDULED", "Séance reportée", body, session);
+    }
+
+    /** Séance annulée par le staff : adressée à l'élève. */
+    private void notifyClientCancelled(Session session) {
+        String body = "Votre séance de " + typeLabel(session.getType()) + " du " + when(session)
+                + " a été annulée par l'auto-école.";
+        notify(session.getClientId(), "SESSION_CANCELLED", "Séance annulée", body, session);
+    }
+
+    private void notify(String recipientId, String type, String title, String body, Session session) {
+        if (recipientId == null || recipientId.isBlank()) {
+            return;
+        }
+        communicationClient.notify(
+                new NotificationRequest(recipientId, type, title, body, session.getId().toString()));
+    }
+
+    private String typeLabel(SessionType type) {
+        return type == SessionType.DRIVING ? "conduite" : "code";
+    }
+
+    private String when(Session session) {
+        return WHEN_FMT.format(session.getStartTime());
+    }
+
+    private String noteSuffix(String note) {
+        return (note == null || note.isBlank()) ? "" : " Motif : " + note.trim();
+    }
+
     // ---- helpers ----
 
     /** Durée de la séance arrondie à l'heure supérieure (au moins 1h). */
     private int durationHours(Session session) {
         long minutes = ChronoUnit.MINUTES.between(session.getStartTime(), session.getEndTime());
         return (int) Math.max(1, Math.ceil(minutes / 60.0));
+    }
+
+    /**
+     * Refuse la séance si le moniteur n'est pas disponible sur le créneau (hors horaires déclarés ou
+     * absence). Sans moniteur, ou pour un moniteur sans horaires déclarés, aucune contrainte.
+     */
+    private void ensureMonitorAvailable(String monitorId, Instant start, Instant end) {
+        if (monitorId != null && !availabilityService.isMonitorAvailable(monitorId, start, end)) {
+            throw new MonitorUnavailableException(
+                    "Le moniteur n'est pas disponible sur ce créneau (hors horaires de travail ou absence)");
+        }
     }
 
     private void ensureNoConflict(Session session) {

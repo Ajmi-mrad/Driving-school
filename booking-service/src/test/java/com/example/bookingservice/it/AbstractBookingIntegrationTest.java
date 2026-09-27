@@ -62,6 +62,7 @@ abstract class AbstractBookingIntegrationTest {
         registry.add("spring.cloud.discovery.client.simple.instances.auth-service[0].uri", () -> base);
         registry.add("spring.cloud.discovery.client.simple.instances.vehicle-service[0].uri", () -> base);
         registry.add("spring.cloud.discovery.client.simple.instances.finance-service[0].uri", () -> base);
+        registry.add("spring.cloud.discovery.client.simple.instances.communication-service[0].uri", () -> base);
         // OAuth2 client_credentials token endpoint (direct, not load-balanced).
         registry.add("spring.security.oauth2.client.provider.keycloak.token-uri", () -> base + "/token");
     }
@@ -76,6 +77,10 @@ abstract class AbstractBookingIntegrationTest {
     void resetWireMock() {
         WIREMOCK.resetAll();
         stubTokenEndpoint();
+        // Notifications de séance (best-effort) : stubs par défaut pour que le chemin nominal
+        // résolve sans bruit. Les tests peuvent surcharger staff-ids au besoin.
+        stubStaffIds();
+        stubNotifyBookingOk();
     }
 
     // ---- WireMock stubs ----
@@ -115,6 +120,26 @@ abstract class AbstractBookingIntegrationTest {
     protected void stubConsumeOk() {
         WIREMOCK.stubFor(post(urlPathEqualTo("/api/enrollments/consume"))
                 .willReturn(aResponse().withStatus(200)));
+    }
+
+    /** Identifiants du staff renvoyés par l'auth-service (destinataires des notifications de demande). */
+    protected void stubStaffIds(String... keycloakIds) {
+        StringBuilder body = new StringBuilder("[");
+        for (int i = 0; i < keycloakIds.length; i++) {
+            if (i > 0) {
+                body.append(',');
+            }
+            body.append('"').append(keycloakIds[i]).append('"');
+        }
+        body.append(']');
+        WIREMOCK.stubFor(get(urlPathEqualTo("/api/users/staff-ids"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body.toString())));
+    }
+
+    /** Endpoint interne de notification de séance du communication-service. */
+    protected void stubNotifyBookingOk() {
+        WIREMOCK.stubFor(post(urlPathEqualTo("/api/notifications/booking"))
+                .willReturn(aResponse().withStatus(201)));
     }
 
     // ---- Inbound auth helpers (JWT injected via spring-security-test) ----
