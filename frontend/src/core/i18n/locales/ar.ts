@@ -446,6 +446,9 @@ export const ar: TranslationSchema = {
     none: 'لا شيء.',
     confidence: { low: 'منخفضة', medium: 'متوسطة', high: 'مرتفعة' },
     failed: 'فشل التحليل: {{message}}',
+    listen: 'استمع',
+    stopAudio: 'إيقاف الصوت',
+    ttsFailed: 'تعذّرت القراءة الصوتية: {{message}}',
   },
   audit: {
     subtitle: 'سجل عمليات الإنشاء والتعديل والحذف (المالية والحسابات).',

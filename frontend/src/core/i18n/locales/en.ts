@@ -447,6 +447,9 @@ export const en: TranslationSchema = {
     none: 'None.',
     confidence: { low: 'low', medium: 'medium', high: 'high' },
     failed: 'The investigation failed: {{message}}',
+    listen: 'Listen',
+    stopAudio: 'Stop audio',
+    ttsFailed: 'Could not read the report aloud: {{message}}',
   },
   audit: {
     subtitle: 'History of creations, edits and deletions (finance and accounts).',

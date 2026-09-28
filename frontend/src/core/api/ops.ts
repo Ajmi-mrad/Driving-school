@@ -1,4 +1,4 @@
-import { streamEvents } from './client'
+import { requestBlob, streamEvents } from './client'
 
 /** A fact the AI observed, backed by the ids of the tool calls that show it (e.g. "t2"). */
 export interface OpsFact {
@@ -47,5 +47,10 @@ export const opsApi = {
     if (!finished && !signal?.aborted) {
       throw new Error('The investigation ended without a result (server timeout?)')
     }
+  },
+
+  /** Text to speech (Murf Falcon, via ai-service): returns an MP3. `language` = UI language code. */
+  speak(text: string, language: string): Promise<Blob> {
+    return requestBlob('/ai/ops/speak', { text, language })
   },
 }

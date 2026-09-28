@@ -52,6 +52,11 @@ ai:
     api-key: ${GEMINI_API_KEY:}
     base-url: https://generativelanguage.googleapis.com/v1beta/openai
     model: ${GEMINI_MODEL:gemini-3.8-flash}
+  # Lecture à voix haute du rapport Ops (Murf Falcon). Clé vide = bouton « Écouter » en 503.
+  murf:
+    api-key: ${MURF_API_KEY:}
+    url: https://global.api.murf.ai/v1/speech/stream
+    voice-id: ${MURF_VOICE_ID:en-US-natalie}
   ops:
     # Liste blanche des outils MCP exposés au modèle (lecture seule, et peu nombreux : chaque
     # définition d'outil coûte des tokens à chaque tour de boucle).

@@ -449,6 +449,9 @@ export const fr = {
     none: 'Rien à signaler.',
     confidence: { low: 'faible', medium: 'moyenne', high: 'élevée' },
     failed: "L'investigation a échoué : {{message}}",
+    listen: 'Écouter',
+    stopAudio: "Arrêter l'audio",
+    ttsFailed: 'Lecture vocale impossible : {{message}}',
   },
   audit: {
     subtitle: "Historique des créations, modifications et suppressions (finance et comptes).",

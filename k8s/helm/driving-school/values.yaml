@@ -60,6 +60,7 @@ secrets:
   # ai-service (only used when services.ai-service.enabled). Groq is required, the rest optional.
   GROQ_API_KEY: ""
   GEMINI_API_KEY: ""
+  MURF_API_KEY: ""
   GITHUB_TOKEN: ""
 
 # Databases created inside the shared Postgres by its init script.
@@ -200,4 +201,5 @@ services:
     secretEnv:
       GROQ_API_KEY: GROQ_API_KEY
       GEMINI_API_KEY: GEMINI_API_KEY
+      MURF_API_KEY: MURF_API_KEY
       GITHUB_TOKEN: GITHUB_TOKEN

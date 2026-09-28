@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -11,6 +12,7 @@ import {
   Search,
   ShieldCheck,
   Square,
+  Volume2,
   XCircle,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -238,7 +240,10 @@ function TurnCard({ turn }: { turn: Turn }) {
             <>
               {turn.report.summary && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">{t('ops.summary')}</h3>
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-medium text-muted-foreground">{t('ops.summary')}</h3>
+                    <ListenButton report={turn.report} />
+                  </div>
                   <p className="mt-1 text-sm">{turn.report.summary}</p>
                 </div>
               )}
@@ -303,6 +308,72 @@ function TurnCard({ turn }: { turn: Turn }) {
         </section>
       </CardContent>
     </Card>
+  )
+}
+
+/** What Listen reads: the summary, then the numbered actions (evidence ids like "t2" would sound like noise). */
+function speechText(report: OpsReport, actionsTitle: string): string {
+  const actions = report.actions.map((action, i) => `${i + 1}. ${action}`)
+  const lines = [report.summary, ...(actions.length ? [`${actionsTitle}:`, ...actions] : [])]
+  return lines.filter(Boolean).join('\n').slice(0, 3000) // backend cap (bounds the TTS cost)
+}
+
+/** Reads the report aloud with Murf Falcon (via ai-service). */
+function ListenButton({ report }: { report: OpsReport }) {
+  const { t, i18n } = useTranslation()
+  const [state, setState] = useState<'idle' | 'loading' | 'playing'>('idle')
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const unmountedRef = useRef(false)
+
+  const release = () => {
+    const audio = audioRef.current
+    audioRef.current = null
+    if (audio) {
+      audio.pause()
+      URL.revokeObjectURL(audio.src)
+    }
+  }
+
+  // Leaving the page stops the audio (and drops a response still in flight).
+  useEffect(() => {
+    unmountedRef.current = false
+    return () => {
+      unmountedRef.current = true
+      release()
+    }
+  }, [])
+
+  const stop = () => {
+    release()
+    setState('idle')
+  }
+
+  const listen = async () => {
+    setState('loading')
+    try {
+      const blob = await opsApi.speak(speechText(report, t('ops.actions')), i18n.language)
+      if (unmountedRef.current) return
+      const audio = new Audio(URL.createObjectURL(blob))
+      audio.onended = stop
+      audioRef.current = audio
+      await audio.play()
+      setState('playing')
+    } catch (e) {
+      stop()
+      toast.error(t('ops.ttsFailed', { message: (e as Error).message }))
+    }
+  }
+
+  return state === 'playing' ? (
+    <Button type="button" variant="ghost" size="sm" onClick={stop}>
+      <Square />
+      {t('ops.stopAudio')}
+    </Button>
+  ) : (
+    <Button type="button" variant="ghost" size="sm" disabled={state === 'loading'} onClick={() => void listen()}>
+      {state === 'loading' ? <Loader2 className="animate-spin" /> : <Volume2 />}
+      {t('ops.listen')}
+    </Button>
   )
 }
 
