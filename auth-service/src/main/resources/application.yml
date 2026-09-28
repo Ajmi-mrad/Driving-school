@@ -1,3 +1,9 @@
+# Outils de développement (seed/reset/export des données). Désactivé par défaut : les endpoints
+# /api/admin/** n'existent (bean créé) que si ce drapeau vaut true. À n'activer qu'en dev.
+app:
+  dev-tools:
+    enabled: ${APP_DEV_TOOLS_ENABLED:false}
+
 spring:
   application:
     name: auth-service

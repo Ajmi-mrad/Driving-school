@@ -33,6 +33,8 @@ services:
       KEYCLOAK_TOKEN_URL: ${KEYCLOAK_TOKEN_URL:-http://localhost:8080/realms/auto-ecole/protocol/openid-connect/token}
       SWAGGER_OAUTH_CLIENT_ID: ${SWAGGER_OAUTH_CLIENT_ID:-auto-ecole-frontend}
       SERVER_PORT: 8084
+      # Outils de dev (seed/reset/export des données) — endpoints /api/admin/** actifs.
+      APP_DEV_TOOLS_ENABLED: "true"
       # Origine autorisée pour le handshake WebSocket (front Angular)
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:4200}
       # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).

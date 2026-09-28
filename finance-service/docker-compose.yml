@@ -36,6 +36,8 @@ services:
       MAIL_PORT: ${MAIL_PORT:-1025}
       MAIL_FROM: ${MAIL_FROM:-no-reply@auto-ecole.local}
       SERVER_PORT: 8085
+      # Outils de dev (seed/reset/export des données) — endpoints /api/admin/** actifs.
+      APP_DEV_TOOLS_ENABLED: "true"
       # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
       EUREKA_ENABLED: "true"
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka

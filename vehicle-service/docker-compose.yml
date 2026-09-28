@@ -29,6 +29,8 @@ services:
       # Keycloak joignable via le réseau partagé de la stack auth-service
       KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
       SERVER_PORT: 8082
+      # Outils de dev (seed/reset/export des données) — endpoints /api/admin/** actifs.
+      APP_DEV_TOOLS_ENABLED: "true"
       # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
       EUREKA_ENABLED: "true"
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka

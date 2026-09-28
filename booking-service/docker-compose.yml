@@ -32,6 +32,8 @@ services:
       KEYCLOAK_BOOKING_CLIENT_ID: ${KEYCLOAK_BOOKING_CLIENT_ID:-booking-service}
       KEYCLOAK_BOOKING_SERVICE_SECRET: ${KEYCLOAK_BOOKING_SERVICE_SECRET:-bookingServiceSecretChangeMe}
       SERVER_PORT: 8083
+      # Outils de dev (seed/reset/export des données) — endpoints /api/admin/** actifs.
+      APP_DEV_TOOLS_ENABLED: "true"
       # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
       EUREKA_ENABLED: "true"
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka
