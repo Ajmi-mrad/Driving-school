@@ -122,6 +122,68 @@ export async function requestBlob(path: string): Promise<Blob> {
   return res.blob()
 }
 
+/**
+ * POST a JSON body and consume a Server-Sent Events response, calling `onEvent`
+ * for each `event:`/`data:` block (data parsed as JSON). `EventSource` can't
+ * send a body or an auth header, hence fetch + a stream reader.
+ * Throws an {@link ApiError} if the response itself is not 2xx.
+ */
+export async function streamEvents(
+  path: string,
+  body: unknown,
+  onEvent: (name: string, data: unknown) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { ...authHeaders(authToken), Accept: 'text/event-stream' },
+      body: JSON.stringify(body),
+      signal,
+    })
+  } catch {
+    if (signal?.aborted) return
+    throw new ApiError(0, 'Impossible de joindre le serveur')
+  }
+  if (!res.ok || !res.body) {
+    throw new ApiError(res.status, await extractError(res))
+  }
+
+  const emit = (block: string) => {
+    let name = 'message'
+    const data: string[] = []
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event:')) name = line.slice(6).trim()
+      else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''))
+    }
+    if (data.length) onEvent(name, JSON.parse(data.join('\n')))
+  }
+
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
+  let buffer = ''
+  try {
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += value.replace(/\r\n/g, '\n')
+      // Events are separated by a blank line; keep the trailing partial event.
+      const blocks = buffer.split('\n\n')
+      buffer = blocks.pop() ?? ''
+      blocks.forEach(emit)
+    }
+  } catch (e) {
+    // Aborting mid-stream (the user's "Stop") rejects read(): a normal end, not an error.
+    if (signal?.aborted) return
+    // Any other failure (bad event, onEvent throwing): close the stream so the server sees the
+    // disconnect and stops working for a UI that has already given up.
+    await reader.cancel().catch(() => undefined)
+    throw e
+  }
+  // A last event not followed by a blank line is still a complete event.
+  if (buffer.trim()) emit(buffer)
+}
+
 /** Best-effort human-readable message from an error response. */
 async function extractError(res: Response): Promise<string> {
   try {

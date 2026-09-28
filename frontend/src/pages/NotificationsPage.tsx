@@ -1,5 +1,16 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CheckCheck, MessageSquare, Wallet } from 'lucide-react'
+import {
+  Award,
+  CalendarCheck,
+  CalendarClock,
+  CalendarX,
+  CheckCheck,
+  CircleX,
+  GraduationCap,
+  MessageSquare,
+  Wallet,
+} from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,19 +25,31 @@ import { formatRelativeShort } from '@/core/format'
 const ICON = {
   NEW_MESSAGE: MessageSquare,
   PAYMENT_DUE: Wallet,
+  SESSION_REQUESTED: CalendarClock,
+  SESSION_CONFIRMED: CalendarCheck,
+  SESSION_REFUSED: CalendarX,
+  SESSION_RESCHEDULED: CalendarClock,
+  SESSION_CANCELLED: CalendarX,
+  EXAM_SCHEDULED: GraduationCap,
+  EXAM_PASSED: Award,
+  EXAM_FAILED: CircleX,
+  EXAM_RESCHEDULED: CalendarClock,
+  EXAM_CANCELLED: CalendarX,
 } as const
 
 export function NotificationsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
 
+  const [size, setSize] = useState(50)
   const { data, loading, reload, refresh } = useAsync(
-    () => (user ? notificationsApi.list(user.id, 0, 50) : Promise.resolve(null)),
-    [user?.id],
+    () => (user ? notificationsApi.list(user.id, 0, size) : Promise.resolve(null)),
+    [user?.id, size],
   )
   useRevalidateOnFocus(refresh)
   const rows = data?.content ?? []
   const hasUnread = rows.some((n) => !n.readAt)
+  const hasMore = rows.length < (data?.totalElements ?? 0)
 
   const markRead = async (n: Notification) => {
     if (n.readAt) return
@@ -99,6 +122,14 @@ export function NotificationsPage() {
             )
           })}
         </ul>
+      )}
+
+      {hasMore && (
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={() => setSize((s) => s + 50)}>
+            {t('notifications.loadMore')}
+          </Button>
+        </div>
       )}
     </div>
   )

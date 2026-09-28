@@ -54,10 +54,19 @@ export function SessionFormDialog({
     () => (staff && open ? usersApi.list('CLIENT') : Promise.resolve([])),
     [open, staff],
   )
-  const { data: monitors } = useAsync(
-    () => (open ? usersApi.list('MONITOR') : Promise.resolve([])),
-    [open],
+  // Staff can list all monitors via the staff-only /users endpoint; a client
+  // (booking their own lesson) isn't allowed there, so it reads its instructors
+  // from /users/contacts, which returns the active monitors for a client caller.
+  const { data: monitorContacts } = useAsync(
+    () =>
+      !open
+        ? Promise.resolve([])
+        : staff
+          ? usersApi.list('MONITOR')
+          : usersApi.contacts(),
+    [open, staff],
   )
+  const monitors = (monitorContacts ?? []).filter((m) => m.roles.includes('MONITOR'))
   const { data: vehicles } = useAsync(
     () => (open ? vehiclesApi.list({ status: 'AVAILABLE' }) : Promise.resolve([])),
     [open],

@@ -12,10 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuth } from '@/core/auth/AuthContext'
 import { useAsync } from '@/core/hooks/useAsync'
 import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { auditApi, usersApi } from '@/core/api'
-import { AUDIT_ACTIONS, AUDIT_ENTITIES, type AuditEvent } from '@/core/types'
+import { AUDIT_ACTIONS, AUDIT_ENTITIES, type AuditEvent, type Role } from '@/core/types'
 import { fullName, formatDateTime } from '@/core/format'
 
 type ActionFilter = (typeof AUDIT_ACTIONS)[number] | 'ALL'
@@ -31,8 +32,14 @@ const ACTION_TONE: Record<string, 'success' | 'info' | 'danger' | 'warning' | 'n
   PASSWORD_RESET: 'warning',
 }
 
+interface Actor {
+  name: string
+  roles: Role[]
+}
+
 export function AuditPage() {
   const { t } = useTranslation()
+  const { user, roles } = useAuth()
   const [action, setAction] = useState<ActionFilter>('ALL')
   const [entityType, setEntityType] = useState<EntityFilter>('ALL')
 
@@ -46,12 +53,16 @@ export function AuditPage() {
   )
   useRevalidateOnFocus(refresh)
 
-  // Resolve the actor's Keycloak sub to a display name (owner can list users).
+  // Resolve the actor's Keycloak sub to a name + role(s). Directory users come from
+  // /users; the current signer (a Keycloak-only admin may have no directory row) is
+  // added from the session so their own actions still resolve.
   const { data: users } = useAsync(() => usersApi.list(), [])
-  const nameOf = useMemo(() => {
-    const map = new Map((users ?? []).map((u) => [u.id, fullName(u)]))
-    return (sub: string) => map.get(sub) ?? (sub === 'system' ? t('audit.system') : sub)
-  }, [users, t])
+  const actorOf = useMemo(() => {
+    const map = new Map<string, Actor>((users ?? []).map((u) => [u.id, { name: fullName(u), roles: u.roles }]))
+    if (user) map.set(user.id, { name: fullName(user), roles })
+    return (sub: string): Actor =>
+      map.get(sub) ?? { name: sub === 'system' ? t('audit.system') : sub, roles: [] }
+  }, [users, user, roles, t])
 
   const rows = data ?? []
 
@@ -62,7 +73,23 @@ export function AuditPage() {
       className: 'whitespace-nowrap',
       cell: (e) => formatDateTime(e.occurredAt),
     },
-    { key: 'who', header: t('audit.who'), cell: (e) => nameOf(e.actor) },
+    {
+      key: 'who',
+      header: t('audit.who'),
+      cell: (e) => {
+        const actor = actorOf(e.actor)
+        return (
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{actor.name}</span>
+            {actor.roles.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {actor.roles.map((r) => t(`enums.role.${r}`)).join(' · ')}
+              </span>
+            )}
+          </div>
+        )
+      },
+    },
     {
       key: 'action',
       header: t('audit.action'),

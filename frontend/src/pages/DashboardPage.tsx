@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatCard } from '@/components/common/StatCard'
+import { SessionsAreaChart, FleetStatusChart } from '@/components/dashboard/DashboardCharts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/core/auth/AuthContext'
 import { useAsync } from '@/core/hooks/useAsync'
@@ -43,21 +44,29 @@ function StaffDashboard() {
   )
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard label={t('dashboard.activeStudents')} value={activeStudents} icon={GraduationCap} />
-      <StatCard label={t('dashboard.sessionsToday')} value={sessionsToday} icon={CalendarDays} />
-      <StatCard
-        label={t('dashboard.availableVehicles')}
-        value={`${available}/${data.vehicles.length}`}
-        icon={Car}
-        tone="success"
-      />
-      <StatCard
-        label={t('dashboard.unpaid')}
-        value={formatCurrency(outstanding)}
-        icon={Wallet}
-        tone={outstanding > 0 ? 'danger' : 'success'}
-      />
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label={t('dashboard.activeStudents')} value={activeStudents} icon={GraduationCap} />
+        <StatCard label={t('dashboard.sessionsToday')} value={sessionsToday} icon={CalendarDays} />
+        <StatCard
+          label={t('dashboard.availableVehicles')}
+          value={`${available}/${data.vehicles.length}`}
+          icon={Car}
+          tone="success"
+        />
+        <StatCard
+          label={t('dashboard.unpaid')}
+          value={formatCurrency(outstanding)}
+          icon={Wallet}
+          tone={outstanding > 0 ? 'danger' : 'success'}
+        />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <SessionsAreaChart sessions={data.sessions} />
+        </div>
+        <FleetStatusChart vehicles={data.vehicles} />
+      </div>
     </div>
   )
 }
@@ -82,25 +91,28 @@ function ClientDashboard({ clientId }: { clientId: string }) {
   const outstanding = data.enrollments.reduce((s, e) => s + e.outstanding, 0)
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard
-        label={t('dashboard.nextSession')}
-        value={upcoming ? formatShortDateTime(upcoming.startTime) : '—'}
-        icon={Clock}
-      />
-      <StatCard
-        label={t('dashboard.remainingDrivingHours')}
-        value={hours}
-        icon={Car}
-        tone="success"
-      />
-      <StatCard label={t('dashboard.remainingCodeSessions')} value={code} icon={CalendarDays} />
-      <StatCard
-        label={t('dashboard.balanceDue')}
-        value={formatCurrency(outstanding)}
-        icon={outstanding > 0 ? TriangleAlert : Wallet}
-        tone={outstanding > 0 ? 'danger' : 'success'}
-      />
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label={t('dashboard.nextSession')}
+          value={upcoming ? formatShortDateTime(upcoming.startTime) : '—'}
+          icon={Clock}
+        />
+        <StatCard
+          label={t('dashboard.remainingDrivingHours')}
+          value={hours}
+          icon={Car}
+          tone="success"
+        />
+        <StatCard label={t('dashboard.remainingCodeSessions')} value={code} icon={CalendarDays} />
+        <StatCard
+          label={t('dashboard.balanceDue')}
+          value={formatCurrency(outstanding)}
+          icon={outstanding > 0 ? TriangleAlert : Wallet}
+          tone={outstanding > 0 ? 'danger' : 'success'}
+        />
+      </div>
+      <SessionsAreaChart sessions={data.sessions} />
     </div>
   )
 }
@@ -119,14 +131,17 @@ function MonitorDashboard({ monitorId }: { monitorId: string }) {
   const pending = data.filter((s) => s.status === 'PENDING').length
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard label={t('dashboard.sessionsToday')} value={today} icon={CalendarDays} />
-      <StatCard
-        label={t('dashboard.toConfirm')}
-        value={pending}
-        icon={Clock}
-        tone={pending > 0 ? 'warning' : 'success'}
-      />
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label={t('dashboard.sessionsToday')} value={today} icon={CalendarDays} />
+        <StatCard
+          label={t('dashboard.toConfirm')}
+          value={pending}
+          icon={Clock}
+          tone={pending > 0 ? 'warning' : 'success'}
+        />
+      </div>
+      <SessionsAreaChart sessions={data} />
     </div>
   )
 }

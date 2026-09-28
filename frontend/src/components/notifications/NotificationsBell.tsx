@@ -1,6 +1,16 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Bell, MessageSquare, Wallet } from 'lucide-react'
+import {
+  Award,
+  Bell,
+  CalendarCheck,
+  CalendarClock,
+  CalendarX,
+  CircleX,
+  GraduationCap,
+  MessageSquare,
+  Wallet,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -17,7 +27,20 @@ import { useRevalidateOnFocus } from '@/hooks/useRevalidateOnFocus'
 import { notificationsApi } from '@/core/api'
 import { formatRelativeShort } from '@/core/format'
 
-const ICON = { NEW_MESSAGE: MessageSquare, PAYMENT_DUE: Wallet } as const
+const ICON = {
+  NEW_MESSAGE: MessageSquare,
+  PAYMENT_DUE: Wallet,
+  SESSION_REQUESTED: CalendarClock,
+  SESSION_CONFIRMED: CalendarCheck,
+  SESSION_REFUSED: CalendarX,
+  SESSION_RESCHEDULED: CalendarClock,
+  SESSION_CANCELLED: CalendarX,
+  EXAM_SCHEDULED: GraduationCap,
+  EXAM_PASSED: Award,
+  EXAM_FAILED: CircleX,
+  EXAM_RESCHEDULED: CalendarClock,
+  EXAM_CANCELLED: CalendarX,
+} as const
 
 export function NotificationsBell() {
   const { t } = useTranslation()
