@@ -103,16 +103,15 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
 /**
  * Issue a request and return the raw response body as a {@link Blob} (for file
- * downloads: PDF, ZIP). Sends the bearer token but no JSON `Content-Type`.
- * Throws an {@link ApiError} on any non-2xx status.
+ * downloads: PDF, ZIP; audio). GET with the bearer token only, or POST with a
+ * JSON `body` when one is given. Throws an {@link ApiError} on any non-2xx status.
  */
-export async function requestBlob(path: string): Promise<Blob> {
+export async function requestBlob(path: string, body?: unknown): Promise<Blob> {
   let res: Response
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'GET',
-      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-    })
+    res = await fetch(`${API_BASE_URL}${path}`, body === undefined
+      ? { method: 'GET', headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} }
+      : { method: 'POST', headers: authHeaders(authToken), body: JSON.stringify(body) })
   } catch {
     throw new ApiError(0, 'Impossible de joindre le serveur')
   }

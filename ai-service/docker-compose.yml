@@ -18,6 +18,9 @@ services:
       # LLM de secours (optionnel) : bascule automatique si Groq échoue.
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
+      # Synthèse vocale du rapport (optionnel).
+      MURF_API_KEY: ${MURF_API_KEY:-}
+      MURF_VOICE_ID: ${MURF_VOICE_ID:-en-US-natalie}
       GRAFANA_MCP_URL: http://mcp-grafana:8000
       KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/certs
       SERVER_PORT: 8086
