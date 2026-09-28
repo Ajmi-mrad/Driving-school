@@ -20,9 +20,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -80,6 +82,70 @@ class NotificationServiceTest {
         assertThat(saved.getAmount()).isEqualByComparingTo("150.00");
         assertThat(saved.getBody()).isEqualTo("Solde à régler");
         verify(messagingTemplate).convertAndSendToUser("client-9", "/queue/notifications", mapped);
+    }
+
+    @Test
+    void createBooking_persistsTypeTitleBodyReference_andPushes() {
+        UUID sessionId = UUID.randomUUID();
+        NotificationResponse mapped = sampleResponse(NotificationType.SESSION_REQUESTED);
+        when(notificationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mapper.toNotificationResponse(any())).thenReturn(mapped);
+
+        NotificationResponse result = service.createBooking("monitor-1", NotificationType.SESSION_REQUESTED,
+                "Nouvelle demande de séance", "Demande de séance de conduite le 10/09/2026.", sessionId.toString());
+
+        assertThat(result).isEqualTo(mapped);
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        Notification saved = captor.getValue();
+        assertThat(saved.getRecipientId()).isEqualTo("monitor-1");
+        assertThat(saved.getType()).isEqualTo(NotificationType.SESSION_REQUESTED);
+        assertThat(saved.getTitle()).isEqualTo("Nouvelle demande de séance");
+        assertThat(saved.getBody()).isEqualTo("Demande de séance de conduite le 10/09/2026.");
+        assertThat(saved.getReferenceId()).isEqualTo(sessionId.toString());
+        verify(messagingTemplate).convertAndSendToUser("monitor-1", "/queue/notifications", mapped);
+    }
+
+    @Test
+    void createBooking_blankBodyAndReference_storedAsNull() {
+        when(notificationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mapper.toNotificationResponse(any())).thenReturn(sampleResponse(NotificationType.SESSION_CANCELLED));
+
+        service.createBooking("client-1", NotificationType.SESSION_CANCELLED, "Séance annulée", "  ", "  ");
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        assertThat(captor.getValue().getBody()).isNull();
+        assertThat(captor.getValue().getReferenceId()).isNull();
+    }
+
+    @Test
+    void createBooking_acceptsExamType_persistsAndPushes() {
+        UUID examId = UUID.randomUUID();
+        NotificationResponse mapped = sampleResponse(NotificationType.EXAM_PASSED);
+        when(notificationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mapper.toNotificationResponse(any())).thenReturn(mapped);
+
+        NotificationResponse result = service.createBooking("client-7", NotificationType.EXAM_PASSED,
+                "Examen réussi", "Félicitations !", examId.toString());
+
+        assertThat(result).isEqualTo(mapped);
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        Notification saved = captor.getValue();
+        assertThat(saved.getRecipientId()).isEqualTo("client-7");
+        assertThat(saved.getType()).isEqualTo(NotificationType.EXAM_PASSED);
+        assertThat(saved.getReferenceId()).isEqualTo(examId.toString());
+        verify(messagingTemplate).convertAndSendToUser("client-7", "/queue/notifications", mapped);
+    }
+
+    @Test
+    void createBooking_rejectsNonSessionType() {
+        assertThatThrownBy(() -> service.createBooking("x", NotificationType.NEW_MESSAGE, "t", "b", null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.createBooking("x", NotificationType.PAYMENT_DUE, "t", "b", null))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(notificationRepository);
     }
 
     @Test

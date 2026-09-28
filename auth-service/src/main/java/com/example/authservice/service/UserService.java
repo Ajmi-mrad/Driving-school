@@ -131,6 +131,23 @@ public class UserService {
                 .toList();
     }
 
+    /**
+     * Identifiants Keycloak ({@code sub}) des membres du staff actifs (propriétaires + secrétaires).
+     * Utilisé par le booking-service pour destiner les notifications de demande de séance au staff.
+     * Dédupliqué (un même compte peut cumuler les deux rôles).
+     */
+    @Transactional(readOnly = true)
+    public List<String> listStaffKeycloakIds() {
+        return java.util.stream.Stream.concat(
+                        userRepository.findByRolesContaining(Role.OWNER).stream(),
+                        userRepository.findByRolesContaining(Role.SECRETARY).stream())
+                .filter(User::isActive)
+                .map(User::getKeycloakId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
     @Transactional
     public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         User user = findOrThrow(id);

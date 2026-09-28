@@ -11,10 +11,20 @@ import java.util.Set;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record UserInfo(
         String keycloakId,
+        String firstName,
+        String lastName,
         Set<String> roles,
         boolean active
 ) {
     public boolean hasRole(String role) {
         return roles != null && roles.contains(role);
+    }
+
+    /** Nom complet lisible, ou {@code null} si aucun nom n'est renseigné. */
+    public String fullName() {
+        String first = firstName == null ? "" : firstName.trim();
+        String last = lastName == null ? "" : lastName.trim();
+        String full = (first + " " + last).trim();
+        return full.isEmpty() ? null : full;
     }
 }

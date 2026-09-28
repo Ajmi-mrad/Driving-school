@@ -25,13 +25,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(SessionNotFoundException.class)
-    public ProblemDetail handleNotFound(SessionNotFoundException ex) {
+    @ExceptionHandler({SessionNotFoundException.class, ExamNotFoundException.class,
+            TimeOffNotFoundException.class})
+    public ProblemDetail handleNotFound(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler({BookingConflictException.class, NoVehicleAvailableException.class,
-            InvalidSessionStateException.class})
+            InvalidSessionStateException.class, MonitorUnavailableException.class})
     public ProblemDetail handleConflict(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }

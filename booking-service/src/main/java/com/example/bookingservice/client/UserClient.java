@@ -1,6 +1,8 @@
 package com.example.bookingservice.client;
 
 import com.example.bookingservice.client.dto.UserInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -16,6 +19,8 @@ import java.util.Optional;
  */
 @Component
 public class UserClient {
+
+    private static final Logger log = LoggerFactory.getLogger(UserClient.class);
 
     private final RestClient restClient;
 
@@ -39,6 +44,25 @@ public class UserClient {
             return Optional.ofNullable(info);
         } catch (HttpClientErrorException.NotFound ex) {
             return Optional.empty();
+        }
+    }
+
+    /**
+     * Identifiants Keycloak du staff actif (propriétaires + secrétaires), destinataires des
+     * notifications de demande de séance. Best-effort : renvoie une liste vide en cas d'échec, afin
+     * de ne jamais perturber la réservation qui déclenche la notification.
+     */
+    public List<String> listStaffIds() {
+        try {
+            String[] ids = restClient.get()
+                    .uri("/api/users/staff-ids")
+                    .retrieve()
+                    .body(String[].class);
+            return ids == null ? List.of() : List.of(ids);
+        } catch (Exception ex) {
+            log.warn("Échec de récupération des identifiants du staff auprès de l'auth-service : {}",
+                    ex.getMessage());
+            return List.of();
         }
     }
 }

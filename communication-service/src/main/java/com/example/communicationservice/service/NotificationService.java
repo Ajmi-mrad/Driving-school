@@ -57,6 +57,27 @@ public class NotificationService {
         persistAndPush(notification);
     }
 
+    /**
+     * Crée une notification liée à une séance (types {@code SESSION_*}), émise par le booking-service.
+     * Le libellé est composé en amont ; on persiste et on pousse en temps réel vers la cloche du
+     * destinataire. Rejette tout type non lié aux séances pour éviter les usages détournés de
+     * l'endpoint de service.
+     */
+    @Transactional
+    public NotificationResponse createBooking(String recipientSub, NotificationType type, String title,
+                                              String body, String referenceId) {
+        if (type == NotificationType.NEW_MESSAGE || type == NotificationType.PAYMENT_DUE) {
+            throw new IllegalArgumentException("Type de notification non autorisé sur cet endpoint : " + type);
+        }
+        Notification notification = new Notification();
+        notification.setRecipientId(recipientSub);
+        notification.setType(type);
+        notification.setTitle(title);
+        notification.setBody(StringUtils.hasText(body) ? body : null);
+        notification.setReferenceId(StringUtils.hasText(referenceId) ? referenceId : null);
+        return persistAndPush(notification);
+    }
+
     /** Envoi manuel (administrateur) d'un rappel de paiement à un client. */
     @Transactional
     public NotificationResponse createPayment(String clientSub, BigDecimal amount, String message) {
