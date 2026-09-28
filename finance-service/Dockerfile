@@ -5,7 +5,9 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn -B -q -DskipTests dependency:go-offline
 COPY src src
-RUN mvn -B -q -DskipTests clean package
+# Commit injecté par la CD (build-arg) ; « local » = image construite sur un poste de dev.
+ARG GIT_COMMIT=local
+RUN mvn -B -q -DskipTests -Dgit.commit=${GIT_COMMIT} clean package
 
 # ---- Stage 2 : runtime (image JRE légère) ----
 # Base image pinned by digest so a base bump busts the buildx cache and re-runs

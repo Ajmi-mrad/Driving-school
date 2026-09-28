@@ -1,6 +1,12 @@
+# Tag json-file avec le nom du conteneur : le collecteur OTel en fait le label Loki service_name.
+x-logging: &logging
+  options:
+    tag: "{{.Name}}"
+
 services:
   # PostgreSQL dédié au finance-service.
   finance-postgres:
+    logging: *logging
     image: postgres:16-alpine
     container_name: finance-postgres
     environment:
@@ -20,6 +26,7 @@ services:
       - auto-ecole
 
   finance-service:
+    logging: *logging
     build: .
     container_name: finance-service
     environment:
