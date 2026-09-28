@@ -24,10 +24,14 @@ spring:
               uri: lb://vehicle-service
               predicates:
                 - Path=/api/vehicles/**
+            - id: booking-service
+              uri: lb://booking-service
+              predicates:
+                - Path=/api/sessions/**,/api/booking-settings/**
             - id: finance-service
               uri: lb://finance-service
               predicates:
-                - Path=/api/forfaits/**,/api/enrollments/**,/api/payments/**,/api/invoices/**
+                - Path=/api/forfaits/**,/api/enrollments/**,/api/payments/**,/api/invoices/**,/api/audit/**
             - id: communication-service
               uri: lb://communication-service
               predicates:

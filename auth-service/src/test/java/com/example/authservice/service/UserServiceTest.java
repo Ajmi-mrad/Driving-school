@@ -40,6 +40,8 @@ class UserServiceTest {
     KeycloakService keycloakService;
     @Mock
     UserMapper userMapper;
+    @Mock
+    AuditService auditService;
     @InjectMocks
     UserService userService;
 
@@ -115,7 +117,7 @@ class UserServiceTest {
         when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userMapper.toResponse(any(User.class))).thenReturn(dummyResponse());
 
-        UpdateUserRequest request = new UpdateUserRequest("new@example.com", "Samira", null, null, null, false);
+        UpdateUserRequest request = new UpdateUserRequest("new@example.com", "Samira", null, null, null, false, null, null);
         userService.updateUser(id, request);
 
         verify(keycloakService).updateUser("kc-id", "new@example.com", "Samira", null);

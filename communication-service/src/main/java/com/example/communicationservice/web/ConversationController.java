@@ -3,8 +3,10 @@ package com.example.communicationservice.web;
 import com.example.communicationservice.service.ConversationService;
 import com.example.communicationservice.web.dto.ConversationResponse;
 import com.example.communicationservice.web.dto.CreateConversationRequest;
+import com.example.communicationservice.web.dto.MessageContentRequest;
 import com.example.communicationservice.web.dto.MessageResponse;
 import com.example.communicationservice.web.dto.PresenceResponse;
+import com.example.communicationservice.web.dto.SendMessageRequest;
 import com.example.communicationservice.web.dto.UnreadCountResponse;
 import com.example.communicationservice.ws.PresenceRegistry;
 import jakarta.validation.Valid;
@@ -79,6 +81,19 @@ public class ConversationController {
                                           @PageableDefault(size = 30) @ParameterObject Pageable pageable,
                                           JwtAuthenticationToken auth) {
         return conversationService.getMessages(id, AuthSupport.sub(auth), pageable);
+    }
+
+    /**
+     * Envoi d'un message via REST (fallback à STOMP) : persiste, met à jour la conversation, pousse
+     * le message aux participants connectés et notifie le destinataire hors-ligne. L'expéditeur vient
+     * du JWT ; la conversation, du chemin.
+     */
+    @PostMapping("/{id}/messages")
+    public MessageResponse sendMessage(@PathVariable UUID id,
+                                       @Valid @RequestBody MessageContentRequest body,
+                                       JwtAuthenticationToken auth) {
+        return conversationService.handleIncomingMessage(
+                AuthSupport.sub(auth), new SendMessageRequest(id, body.content()));
     }
 
     @PatchMapping("/{id}/read")

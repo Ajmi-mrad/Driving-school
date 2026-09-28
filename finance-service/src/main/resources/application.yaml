@@ -17,6 +17,14 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+  # SMTP pour l'envoi des documents financiers. En dev : Mailpit (aucune auth/TLS).
+  mail:
+    host: ${MAIL_HOST:mailpit}
+    port: ${MAIL_PORT:1025}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
   security:
     oauth2:
       # Volet « resource server » : valide les JWT entrants (signature via la JWKS du realm).
@@ -41,6 +49,8 @@ finance:
     registration-id: keycloak
     auth-service-url: ${AUTH_SERVICE_URL:http://auth-service}
     communication-service-url: ${COMMUNICATION_SERVICE_URL:http://communication-service}
+  mail:
+    from: ${MAIL_FROM:no-reply@auto-ecole.local}
 
 eureka:
   client:

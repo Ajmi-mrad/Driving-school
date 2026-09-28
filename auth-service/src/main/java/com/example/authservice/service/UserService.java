@@ -9,6 +9,7 @@ import com.example.authservice.mapper.UserMapper;
 import com.example.authservice.repository.UserRepository;
 import com.example.authservice.web.dto.CreateUserRequest;
 import com.example.authservice.web.dto.UpdateUserRequest;
+import com.example.authservice.web.dto.ContactResponse;
 import com.example.authservice.web.dto.UserResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -39,11 +41,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final KeycloakService keycloakService;
     private final UserMapper userMapper;
+    private final AuditService auditService;
 
-    public UserService(UserRepository userRepository, KeycloakService keycloakService, UserMapper userMapper) {
+    public UserService(UserRepository userRepository, KeycloakService keycloakService,
+                       UserMapper userMapper, AuditService auditService) {
         this.userRepository = userRepository;
         this.keycloakService = keycloakService;
         this.userMapper = userMapper;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -83,6 +88,7 @@ public class UserService {
         }
 
         User saved = userRepository.save(user);
+        auditService.record("CREATED", "USER", saved.getId(), saved.getUsername());
         log.info("Utilisateur créé id={} username={}", saved.getId(), saved.getUsername());
         return userMapper.toResponse(saved);
     }
@@ -92,12 +98,37 @@ public class UserService {
         return userMapper.toResponse(findOrThrow(id));
     }
 
+    /** Résolution d'un utilisateur par son identifiant Keycloak ({@code sub}) — usage inter-services. */
+    @Transactional(readOnly = true)
+    public UserResponse getByKeycloakId(String keycloakId) {
+        return userRepository.findByKeycloakId(keycloakId)
+                .map(userMapper::toResponse)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Utilisateur introuvable: " + keycloakId));
+    }
+
     @Transactional(readOnly = true)
     public List<UserResponse> listUsers(Role role) {
         List<User> users = (role == null)
                 ? userRepository.findAll()
                 : userRepository.findByRolesContaining(role);
         return users.stream().map(userMapper::toResponse).toList();
+    }
+
+    /**
+     * Interlocuteurs de messagerie de l'appelant : un moniteur discute avec les élèves, un élève avec
+     * les moniteurs. Vue minimale (nom + id Keycloak), comptes actifs uniquement.
+     */
+    @Transactional(readOnly = true)
+    public List<ContactResponse> listContacts(Set<String> callerRoles) {
+        Role target = callerRoles.contains(Role.MONITOR.name()) ? Role.CLIENT : Role.MONITOR;
+        return userRepository.findByRolesContaining(target).stream()
+                .filter(User::isActive)
+                .map(u -> new ContactResponse(u.getKeycloakId(), u.getFirstName(), u.getLastName(),
+                        // Copie défensive : matérialise la collection lazy dans la transaction
+                        // (sinon échec de sérialisation après fermeture de session).
+                        new LinkedHashSet<>(u.getRoles())))
+                .toList();
     }
 
     @Transactional
@@ -131,9 +162,38 @@ public class UserService {
             user.setNotificationsEnabled(request.notificationsEnabled());
         }
 
+        // Synchronisation des rôles : on ne touche à Keycloak que pour le delta (ajouts/retraits).
+        if (request.roles() != null) {
+            if (request.roles().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Au moins un rôle est requis");
+            }
+            EnumSet<Role> target = EnumSet.copyOf(request.roles());
+            EnumSet<Role> current = user.getRoles().isEmpty()
+                    ? EnumSet.noneOf(Role.class)
+                    : EnumSet.copyOf(user.getRoles());
+            for (Role role : target) {
+                if (!current.contains(role)) {
+                    keycloakService.assignRealmRole(user.getKeycloakId(), role.name());
+                }
+            }
+            for (Role role : current) {
+                if (!target.contains(role)) {
+                    keycloakService.removeRealmRole(user.getKeycloakId(), role.name());
+                }
+            }
+            user.setRoles(target);
+        }
+
+        // Activation / désactivation (permet de réactiver un compte désactivé).
+        if (request.active() != null && request.active() != user.isActive()) {
+            keycloakService.setEnabled(user.getKeycloakId(), request.active());
+            user.setActive(request.active());
+        }
+
         // saveAndFlush : force le flush (et le déclenchement de @PreUpdate / updatedAt) avant de
         // mapper la réponse, sinon le DTO renverrait un updatedAt encore à sa valeur d'origine.
         User saved = userRepository.saveAndFlush(user);
+        auditService.record("UPDATED", "USER", saved.getId(), saved.getUsername());
         log.info("Utilisateur mis à jour id={}", saved.getId());
         return userMapper.toResponse(saved);
     }
@@ -142,7 +202,7 @@ public class UserService {
      * Déclenche l'envoi par Keycloak d'un email de réinitialisation de mot de passe.
      * Nécessite que l'utilisateur ait un email (sinon rien à envoyer).
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public void requestPasswordReset(UUID id) {
         User user = findOrThrow(id);
         if (user.getEmail() == null || user.getEmail().isBlank()) {
@@ -150,6 +210,7 @@ public class UserService {
                     "Aucun email associé : réinitialisation par email impossible");
         }
         keycloakService.sendPasswordResetEmail(user.getKeycloakId());
+        auditService.record("PASSWORD_RESET", "USER", user.getId(), user.getUsername());
     }
 
     @Transactional
@@ -158,6 +219,7 @@ public class UserService {
         keycloakService.setEnabled(user.getKeycloakId(), false);
         user.setActive(false);
         userRepository.save(user);
+        auditService.record("DEACTIVATED", "USER", user.getId(), user.getUsername());
         log.info("Utilisateur désactivé id={}", id);
     }
 

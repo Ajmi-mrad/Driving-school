@@ -122,6 +122,15 @@
         "clientRole": false,
         "containerId": "97142052-1a04-484c-b860-7480a7fa74f1",
         "attributes": {}
+      },
+      {
+        "id": "9f437642-5880-44d2-9b9f-39173493996b",
+        "name": "SERVICE",
+        "description": "Compte de service inter-services (client_credentials)",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "97142052-1a04-484c-b860-7480a7fa74f1",
+        "attributes": {}
       }
     ],
     "client": {
@@ -538,6 +547,22 @@
       "groups": []
     },
     {
+      "id": "fd8c0e78-8860-4f9e-830b-8642ebde1279",
+      "username": "service-account-booking-service",
+      "emailVerified": false,
+      "enabled": true,
+      "totp": false,
+      "serviceAccountClientId": "booking-service",
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-auto-ecole",
+        "SERVICE"
+      ],
+      "notBefore": 0,
+      "groups": []
+    },
+    {
       "username": "owner",
       "enabled": true,
       "emailVerified": true,
@@ -758,6 +783,68 @@
         "logout.confirmation.enabled": "false",
         "oidc.ciba.grant.enabled": "false",
         "client.secret.creation.time": "1781691810",
+        "backchannel.logout.session.required": "true",
+        "standard.token.exchange.enabled": "false",
+        "oauth2.jwt.authorization.grant.enabled": "false",
+        "frontchannel.logout.session.required": "true",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "display.on.consent.screen": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "dpop.bound.access.tokens": "false"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": true,
+      "nodeReRegistrationTimeout": -1,
+      "defaultClientScopes": [
+        "web-origins",
+        "service_account",
+        "acr",
+        "roles",
+        "profile",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "organization",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "id": "83d0bc85-6cb5-4553-9feb-a1edb7bec144",
+      "clientId": "booking-service",
+      "name": "",
+      "description": "Compte de service du booking-service (appels sortants client_credentials).",
+      "rootUrl": "",
+      "adminUrl": "",
+      "baseUrl": "",
+      "surrogateAuthRequired": false,
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "bookingServiceSecretChangeMe",
+      "redirectUris": [
+        "/*"
+      ],
+      "webOrigins": [
+        "/*"
+      ],
+      "notBefore": 0,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "realm_client": "false",
+        "logout.confirmation.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
         "backchannel.logout.session.required": "true",
         "standard.token.exchange.enabled": "false",
         "oauth2.jwt.authorization.grant.enabled": "false",
@@ -2832,5 +2919,7 @@
   },
   "clientPolicies": {
     "policies": []
-  }
+  },
+  "loginTheme": "auto-ecole",
+  "passwordPolicy": "length(8) and upperCase(1) and specialChars(1) and digits(1)"
 }

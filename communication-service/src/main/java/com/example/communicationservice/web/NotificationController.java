@@ -63,9 +63,13 @@ public class NotificationController {
         return ResponseEntity.noContent().build();
     }
 
-    /** Rappel de paiement envoyé manuellement par un administrateur à un client. */
+    /**
+     * Rappel de paiement destiné à un client. Endpoint interne : appelé par le finance-service
+     * (bouton « Envoyer un rappel ») avec un jeton client_credentials (rôle {@code SERVICE}),
+     * ou directement par le staff. Surcharge la règle de la classe.
+     */
     @PostMapping("/payment")
-    @PreAuthorize("hasAnyRole('OWNER','SECRETARY')")
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY','SERVICE')")
     public ResponseEntity<NotificationResponse> sendPayment(@Valid @RequestBody CreatePaymentNotificationRequest request) {
         NotificationResponse created = notificationService.createPayment(
                 request.clientId(), request.amount(), request.message());

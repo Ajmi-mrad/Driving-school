@@ -1,0 +1,304 @@
+/*
+ * Auto-École brand skin for the Keycloak login pages.
+ * Layered over Keycloakify's default (classic login-pf) theme — overrides the
+ * background, card, header (logo + wordmark), inputs, primary button and links
+ * to match the React app's shadcn design tokens. RTL-safe (logical props).
+ */
+:root {
+  --ae-brand: oklch(0.52 0.16 256);
+  --ae-brand-hover: oklch(0.46 0.16 256);
+  --ae-brand-fg: #ffffff;
+  --ae-bg: oklch(0.985 0 0);
+  --ae-muted-bg: oklch(0.97 0.005 256);
+  --ae-fg: oklch(0.205 0 0);
+  --ae-muted-fg: oklch(0.556 0 0);
+  --ae-border: oklch(0.922 0 0);
+  --ae-radius: 0.625rem;
+  --ae-ring: oklch(0.52 0.16 256 / 0.35);
+  --ae-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "Noto Sans Arabic", sans-serif;
+}
+
+/* ---- Page background --------------------------------------------------- */
+html.login-pf,
+body.login-pf,
+.login-pf body,
+body {
+  background: var(--ae-muted-bg) !important;
+  font-family: var(--ae-font) !important;
+  color: var(--ae-fg);
+}
+
+.login-pf-page {
+  padding-top: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.login-pf-page .container,
+.login-pf-page [class*="col-"] {
+  float: none !important;
+  width: 100% !important;
+  max-width: 26rem;
+  margin-inline: auto !important;
+  padding: 0 1rem;
+}
+
+/* ---- Brand header (logo badge + wordmark) ------------------------------ */
+#kc-header,
+#kc-header-wrapper {
+  color: var(--ae-fg) !important;
+  font-size: 0 !important; /* hide default realm text, replace via ::after */
+  text-align: center;
+  padding: 0 !important;
+  margin: 0 auto 1.25rem !important;
+  border: 0 !important;
+  background: transparent !important;
+  width: 100%;
+}
+
+#kc-header-wrapper::before {
+  content: "";
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 0.75rem;
+  border-radius: 0.75rem;
+  background-color: var(--ae-brand);
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyOCIgaGVpZ2h0PSIyOCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTkgMTdoMmMuNiAwIDEtLjQgMS0xdi0zYzAtLjktLjctMS43LTEuNS0xLjlDMTguNyAxMC42IDE2IDEwIDE2IDEwcy0xLjMtMS40LTIuMi0yLjNjLS41LS40LTEuMS0uNy0xLjgtLjdINWMtLjYgMC0xLjEuNC0xLjQuOWwtMS40IDIuOUEzLjcgMy43IDAgMCAwIDIgMTJ2NGMwIC42LjQgMSAxIDFoMiIvPjxjaXJjbGUgY3g9IjciIGN5PSIxNyIgcj0iMiIvPjxwYXRoIGQ9Ik05IDE3aDYiLz48Y2lyY2xlIGN4PSIxNyIgY3k9IjE3IiByPSIyIi8+PC9zdmc+Cg==");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+#kc-header-wrapper::after {
+  content: "Auto-École";
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ae-fg);
+}
+
+/* ---- Card -------------------------------------------------------------- */
+.card-pf {
+  background: var(--ae-bg) !important;
+  border: 1px solid var(--ae-border) !important;
+  border-radius: var(--ae-radius) !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  padding: 2rem !important;
+  margin: 0 auto !important;
+  max-width: 26rem;
+}
+
+#kc-page-title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ae-muted-fg);
+  text-align: center;
+  margin-top: 0;
+}
+
+/* ---- Labels & inputs --------------------------------------------------- */
+.control-label,
+label {
+  font-weight: 500 !important;
+  color: var(--ae-fg) !important;
+  font-size: 0.875rem;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+.pf-c-form-control,
+.form-control {
+  width: 100% !important;
+  height: auto !important;
+  padding: 0.55rem 0.75rem !important;
+  border: 1px solid var(--ae-border) !important;
+  border-radius: calc(var(--ae-radius) - 2px) !important;
+  background: var(--ae-bg) !important;
+  color: var(--ae-fg) !important;
+  font-size: 0.9rem !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+.pf-c-form-control:focus,
+.form-control:focus {
+  border-color: var(--ae-brand) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--ae-ring) !important;
+}
+
+/* ---- Primary button ---------------------------------------------------- */
+.btn-primary,
+#kc-login,
+.pf-c-button.pf-m-primary,
+input[type="submit"].btn-primary {
+  background: var(--ae-brand) !important;
+  border: 1px solid var(--ae-brand) !important;
+  border-radius: calc(var(--ae-radius) - 2px) !important;
+  color: var(--ae-brand-fg) !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  padding: 0.6rem 1rem !important;
+  width: 100% !important;
+  box-shadow: none !important;
+  transition: background-color 0.15s;
+}
+
+.btn-primary:hover,
+#kc-login:hover,
+.pf-c-button.pf-m-primary:hover {
+  background: var(--ae-brand-hover) !important;
+  border-color: var(--ae-brand-hover) !important;
+}
+
+/* Secondary / default buttons */
+.btn-default,
+.pf-c-button.pf-m-secondary {
+  border-radius: calc(var(--ae-radius) - 2px) !important;
+  border: 1px solid var(--ae-border) !important;
+  background: var(--ae-bg) !important;
+  color: var(--ae-fg) !important;
+  font-weight: 500 !important;
+}
+
+/* ---- Links & misc ------------------------------------------------------ */
+a,
+#kc-registration a,
+#kc-info-message a {
+  color: var(--ae-brand) !important;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+#kc-form-options,
+#kc-registration {
+  font-size: 0.85rem;
+  color: var(--ae-muted-fg);
+}
+
+/* Checkbox accent */
+input[type="checkbox"] {
+  accent-color: var(--ae-brand);
+}
+
+/* Locale switcher */
+#kc-locale ul {
+  border-radius: calc(var(--ae-radius) - 2px);
+  border: 1px solid var(--ae-border);
+  background: var(--ae-bg);
+}
+
+/* Alerts: keep readable, soften corners */
+.alert,
+.pf-c-alert {
+  border-radius: calc(var(--ae-radius) - 2px) !important;
+}
+
+/* ---- Password strength meter ------------------------------------------ */
+.ae-pw {
+  margin-top: 0.6rem;
+}
+
+.ae-pw-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ae-border);
+  overflow: hidden;
+}
+
+.ae-pw-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s ease, background-color 0.2s ease;
+  background: #ef4444; /* fallback */
+}
+
+/* Colour by strength level (1 weak → 4 strong = green) */
+.ae-pw-bar-fill[data-level="1"] {
+  background: #ef4444;
+}
+.ae-pw-bar-fill[data-level="2"] {
+  background: #f59e0b;
+}
+.ae-pw-bar-fill[data-level="3"] {
+  background: #eab308;
+}
+.ae-pw-bar-fill[data-level="4"] {
+  background: #16a34a;
+}
+
+.ae-pw-label {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ae-muted-fg);
+}
+.ae-pw-label[data-level="4"] {
+  color: #16a34a;
+}
+
+.ae-pw-rules {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.ae-pw-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--ae-muted-fg);
+}
+
+.ae-pw-rule.met {
+  color: #16a34a;
+}
+
+.ae-pw-rule-icon {
+  display: inline-flex;
+  width: 1rem;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.ae-pw-mismatch {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #ef4444;
+}
+
+/* Disabled submit while the password isn't strong / matching */
+.btn-primary:disabled,
+#kc-login:disabled,
+input[type="submit"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* RTL: flip the rule row direction */
+[dir="rtl"] .ae-pw-rule {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+/* ---- RTL (Arabic) ------------------------------------------------------ */
+[dir="rtl"] #kc-header-wrapper,
+[dir="rtl"] #kc-page-title {
+  text-align: center;
+}

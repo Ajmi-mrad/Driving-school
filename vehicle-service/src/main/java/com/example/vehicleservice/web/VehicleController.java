@@ -53,12 +53,17 @@ public class VehicleController {
         return ResponseEntity.created(location).body(created);
     }
 
+    // Endpoints internes : appelés par booking-service avec un jeton client_credentials
+    // (rôle SERVICE) pour valider/affecter un véhicule, en plus du staff. Surcharge la
+    // règle staff-only de la classe.
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY','MONITOR','SERVICE')")
     public VehicleResponse get(@PathVariable UUID id) {
         return vehicleService.get(id);
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('OWNER','SECRETARY','MONITOR','SERVICE')")
     public List<VehicleResponse> list(@RequestParam(required = false) VehicleStatus status,
                                       @RequestParam(required = false) FuelType fuelType) {
         return vehicleService.list(status, fuelType);

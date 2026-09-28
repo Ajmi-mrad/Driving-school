@@ -31,6 +31,10 @@ services:
       KEYCLOAK_TOKEN_URI: http://keycloak:8080/realms/auto-ecole/protocol/openid-connect/token
       KEYCLOAK_FINANCE_CLIENT_ID: ${KEYCLOAK_FINANCE_CLIENT_ID:-finance-service}
       KEYCLOAK_FINANCE_SERVICE_SECRET: ${KEYCLOAK_FINANCE_SERVICE_SECRET:-financeServiceSecretChangeMe}
+      # SMTP dev : Mailpit (même réseau partagé). Boîte de réception : http://localhost:8025
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@auto-ecole.local}
       SERVER_PORT: 8085
       # Enregistrement Eureka : le discovery-service tourne dans la stack auth-service (même réseau).
       EUREKA_ENABLED: "true"

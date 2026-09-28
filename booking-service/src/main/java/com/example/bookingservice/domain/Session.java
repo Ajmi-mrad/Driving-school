@@ -52,6 +52,10 @@ public class Session extends Auditable {
     @Column(name = "notes", length = 1000)
     private String notes;
 
+    /** Note laissée par le staff/moniteur à la confirmation ou au refus (ex. créneaux proposés). */
+    @Column(name = "decision_note", length = 1000)
+    private String decisionNote;
+
     public UUID getId() {
         return id;
     }
@@ -122,5 +126,13 @@ public class Session extends Auditable {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getDecisionNote() {
+        return decisionNote;
+    }
+
+    public void setDecisionNote(String decisionNote) {
+        this.decisionNote = decisionNote;
     }
 }

@@ -47,6 +47,8 @@ class PaymentServiceTest {
     private NotificationClient notificationClient;
     @Mock
     private FinanceMapper mapper;
+    @Mock
+    private AuditService auditService;
 
     @InjectMocks
     private PaymentService service;
@@ -74,7 +76,7 @@ class PaymentServiceTest {
 
         assertThat(enrollment.getAmountPaid()).isEqualByComparingTo("1000.00");
         assertThat(enrollment.getStatus()).isEqualTo(EnrollmentStatus.COMPLETED);
-        verify(invoiceService).issue(eq(enrollment), eq(InvoiceType.RECEIPT), eq(new BigDecimal("1000.00")));
+        verify(invoiceService).issue(eq(enrollment), eq(InvoiceType.RECEIPT), eq(new BigDecimal("1000.00")), any());
     }
 
     @Test
