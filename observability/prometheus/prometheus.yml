@@ -27,6 +27,13 @@ scrape_configs:
           - finance-service:8085
           - booking-service:8083
 
+  # Optional AI Ops assistant: own job so the ServiceDown alert (job="spring-actuator")
+  # doesn't fire permanently when ai-service isn't started.
+  - job_name: ai-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: [ai-service:8086]
+
   # OpenTelemetry Collector's own telemetry.
   - job_name: otel-collector
     static_configs:

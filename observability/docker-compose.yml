@@ -69,6 +69,27 @@ services:
     depends_on: [prometheus, loki, jaeger]
     restart: unless-stopped
 
+  # MCP server used by ai-service to query Prometheus + Loki through Grafana. Read-only:
+  # --disable-write drops every mutating tool, and the token belongs to a Viewer service account
+  # (create it in Grafana ▸ Administration ▸ Service accounts, put it in observability/.env).
+  mcp-grafana:
+    logging: *logging
+    image: grafana/mcp-grafana:1.6.0
+    container_name: mcp-grafana
+    command:
+      - -t
+      - streamable-http
+      - --address=0.0.0.0:8000
+      - --allowed-hosts=mcp-grafana:8000,localhost:8000
+      - --disable-write
+    environment:
+      GRAFANA_URL: http://grafana:3000
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN:-}
+    ports:
+      - "127.0.0.1:8000:8000"   # host-only (no auth on MCP): for running ai-service from the IDE
+    depends_on: [grafana]
+    restart: unless-stopped
+
   otel-collector:
     logging: *logging
     image: otel/opentelemetry-collector-contrib:0.109.0

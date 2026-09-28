@@ -1,0 +1,94 @@
+spring:
+  application:
+    name: ai-service
+
+  ai:
+    # Groq expose une API compatible OpenAI : le starter OpenAI est simplement pointé dessus.
+    openai:
+      api-key: ${GROQ_API_KEY:}
+      base-url: ${AI_BASE_URL:https://api.groq.com/openai}
+      chat:
+        options:
+          model: ${AI_MODEL:openai/gpt-oss-120b}
+          temperature: 0.2
+    # Seul le chat est utilisé : pas de beans embedding / image / audio / modération.
+    model:
+      embedding: none
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+    # Retry des appels LLM (Retry-After, quota journalier, échecs gpt-oss) : voir LlmRetryConfig.
+    mcp:
+      client:
+        type: SYNC
+        # Connexion paresseuse : le service démarre même si un serveur MCP est indisponible.
+        initialized: false
+        request-timeout: 30s
+        # Les outils MCP sont filtrés et tracés par OpsAgent, pas enregistrés globalement.
+        toolcallback:
+          enabled: false
+        streamable-http:
+          connections:
+            grafana:
+              url: ${GRAFANA_MCP_URL:http://localhost:8000}
+              endpoint: /mcp
+            github:
+              url: https://api.githubcopilot.com
+              # Mode read-only côté serveur GitHub : aucun outil d'écriture n'est exposé.
+              endpoint: /mcp/readonly
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8080/realms/auto-ecole/protocol/openid-connect/certs}
+
+ai:
+  # LLM de secours (bascule automatique si Groq échoue) : API Gemini compatible OpenAI.
+  # Clé vide = pas de secours.
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    base-url: https://generativelanguage.googleapis.com/v1beta/openai
+    model: ${GEMINI_MODEL:gemini-3.8-flash}
+  ops:
+    # Liste blanche des outils MCP exposés au modèle (lecture seule, et peu nombreux : chaque
+    # définition d'outil coûte des tokens à chaque tour de boucle).
+    allowed-mcp-tools: query_prometheus,query_loki_logs,list_commits,actions_list
+    github:
+      token: ${GITHUB_TOKEN:}
+      repo: ${GITHUB_REPO:Ajmi-mrad/Driving-school}
+      toolsets: repos,actions
+
+eureka:
+  client:
+    enabled: ${EUREKA_ENABLED:true}
+    register-with-eureka: ${EUREKA_ENABLED:true}
+    fetch-registry: ${EUREKA_ENABLED:true}
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:1.0}   # dev: sample everything
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces
+
+server:
+  port: ${SERVER_PORT:8086}

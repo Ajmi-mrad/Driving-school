@@ -1,0 +1,42 @@
+name: ai-service
+
+on:
+  pull_request:
+    paths:
+      - "ai-service/**"
+      - ".github/workflows/ai-service.yml"
+      - ".github/workflows/reusable-*.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ai-service/**"
+      - ".github/workflows/ai-service.yml"
+      - ".github/workflows/reusable-*.yml"
+
+## For this specific service and this specific Git reference (branch/PR/tag),
+## allow only one workflow execution at a time; if a newer one starts, cancel the older one
+concurrency:
+  group: ai-service-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      service: ai-service
+
+  cd:
+    if: github.ref == 'refs/heads/main'
+    needs: ci
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/reusable-cd.yml
+    with:
+      service: ai-service
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
