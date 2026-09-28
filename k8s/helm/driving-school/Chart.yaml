@@ -1,0 +1,7 @@
+apiVersion: v2
+name: driving-school
+description: Umbrella chart for the Driving School microservices (backend)
+type: application
+version: 0.1.0
+# appVersion tracks the container image tag we deploy by default.
+appVersion: "latest"

@@ -1,0 +1,14 @@
+Driving School deployed to namespace: {{ .Release.Namespace }}
+
+1) Watch pods come up (Postgres + Keycloak first, then the 7 apps):
+     kubectl get pods -n {{ .Release.Namespace }} -w
+
+2) Add these hosts to /etc/hosts, all pointing at your cluster IP (`minikube ip`):
+     <minikube-ip>  {{ .Values.ingress.apiHost }} {{ .Values.ingress.keycloakHost }} {{ .Values.ingress.eurekaHost }}
+
+3) URLs:
+     API gateway : http://{{ .Values.ingress.apiHost }}/actuator/health
+     Keycloak    : http://{{ .Values.ingress.keycloakHost }}  (realm: {{ .Values.realm }})
+     Eureka      : http://{{ .Values.ingress.eurekaHost }}
+
+4) Test login (dev user from the realm): owner / Owner123!

@@ -1,0 +1,6 @@
+{{- range $name, $svc := .Values.services }}
+{{- if ne (toString $svc.enabled) "false" }}
+---
+{{ include "ds.springservice" (dict "name" $name "svc" $svc "root" $) }}
+{{- end }}
+{{- end }}
