@@ -26,9 +26,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
 
       # The chart embeds the realm; the copy under files/ is gitignored (same as deploy.yml).
       - name: Sync realm into chart
